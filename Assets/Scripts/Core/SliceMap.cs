@@ -49,6 +49,9 @@ public class SliceMap
     private static readonly Dictionary<int, float> leftBackhandDict = new Dictionary<int, float>()
     { { 0, 0 }, { 1, -180 }, { 2, -90 }, { 3, 90 }, { 4, -45 }, { 5, 45 }, { 6, -135 }, { 7, 135 }, { 8, 0 } };
 
+    private static readonly Dictionary<int, int> opposingCutDict = new Dictionary<int, int>()
+    { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
+
     private static readonly List<int> forehandResetDict = new List<int>()
     { 1, 2, 3, 5, 6, 7 };
     private static readonly List<int> backhandResetDict = new List<int>()
@@ -242,7 +245,6 @@ public class SliceMap
                 // Modify swing information
                 if (distanceToStart > distanceToEnd)
                 {
-                    Debug.Log("Beat No: " + curSwing.notesInCut[0].b);
                     curSwing.notesInCut.Reverse();
                     curSwing.startPositioning.angle = AngleBetweenNotes(curSwing.notesInCut[curSwing.notesInCut.Count - 1], curSwing.notesInCut[0]);
                     curSwing.sliceStartBeat = curSwing.notesInCut[0].b;
@@ -255,6 +257,14 @@ public class SliceMap
 
                 // Set ending angle equal to starting angle
                 curSwing.endPositioning.angle = curSwing.startPositioning.angle;
+            } else {
+                // If its only a single note and its a dot, cut it in the opposing direction to the last swing (assuming that wasnt a dot)
+                if (lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d != 8)
+                {
+                    int cutDirectionID = opposingCutDict[lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d];
+                    curSwing.startPositioning.angle = (curSwing.sliceParity == Parity.Forehand) ?
+                        rightForehandDict[cutDirectionID] : rightBackhandDict[cutDirectionID];
+                }
             }
         }
         return curSwing;
