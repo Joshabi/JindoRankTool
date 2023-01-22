@@ -261,16 +261,25 @@ public class SliceMap
                 // If its only a single note and its a dot, cut it in the opposing direction to the last swing (assuming that wasnt a dot)
                 if (lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d != 8)
                 {
-                    int cutDirectionID = opposingCutDict[lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d];
-                    curSwing.startPositioning.angle = (curSwing.sliceParity == Parity.Forehand) ?
-                        rightForehandDict[cutDirectionID] : rightBackhandDict[cutDirectionID];
+                    curSwing.startPositioning.angle = AngleGivenCutDirection(opposingCutDict[lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d], curSwing.sliceParity);
                 }
             }
+        } else if (curSwing.notesInCut[0].d == 8 && curSwing.notesInCut[curSwing.notesInCut.Count-1].d != 8) {
+            // In the event its a dot then an arrow
+            curSwing.startPositioning.angle = AngleGivenCutDirection(curSwing.notesInCut[curSwing.notesInCut.Count - 1].d, curSwing.sliceParity);
+        } else if (curSwing.notesInCut[0].d != 8 && curSwing.notesInCut[curSwing.notesInCut.Count - 1].d == 8) {
+            // In the event its an arrow, then a dot
+            curSwing.startPositioning.angle = AngleGivenCutDirection(curSwing.notesInCut[0].d, curSwing.sliceParity);
         }
         return curSwing;
     }
 
     #region Helper Functions
+    // Given a cut direction ID, return angle from appropriate dictionary
+    private float AngleGivenCutDirection(int cutDirection, Parity parity)
+    {
+        return (parity == Parity.Forehand) ? rightForehandDict[cutDirection] : rightBackhandDict[cutDirection];
+    }
     // Returns the angle between any 2 given notes
     private float AngleBetweenNotes(ColourNote firstNote, ColourNote lastNote) {
         Vector3 firstNoteCoords = new Vector3(firstNote.x, firstNote.y, 0);
