@@ -13,13 +13,27 @@ public class JindoRankTool : MonoBehaviour
     [SerializeField] private Text _mapNameTextField;
     [SerializeField] private float _timeScale = 1.0f;
 
+    private LevelSliceMapOutputter _sliceMapOutputter;
+    private System.Guid _doublesAnalyserID;
+
     private void Awake()
     {
         Time.timeScale = _timeScale;
         if (_levelLoader != null)
         {
+            _sliceMapOutputter = new LevelSliceMapOutputter(_levelLoader);
+            _doublesAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapDoublesAnalyser());
+
             _levelLoader.OnLevelLoaded += _levelLoader_OnLevelLoaded;
             _levelLoader.LoadLevel(_customLevelPath, _desiredDifficulty);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_sliceMapOutputter != null)
+        {
+            _sliceMapOutputter.UnregisterAnalyser(_doublesAnalyserID);
         }
     }
 
