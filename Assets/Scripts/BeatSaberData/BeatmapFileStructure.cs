@@ -100,11 +100,20 @@ public struct BeatmapFileStructureV2
     public ObstacleV2[] _obstacles;
 }
 
+public enum BeatmapDifficultyRank
+{
+    Easy = 1,
+    Normal = 3,
+    Hard = 5,
+    Expert = 7,
+    ExpertPlus = 9,
+}
+
 [System.Serializable]
 public struct BeatmapStructure
 {
     public string _difficulty;
-    public int _difficultyRank;
+    public BeatmapDifficultyRank _difficultyRank;
     public string _beatmapFilename;
     public float _noteJumpMovementSpeed;
     public float _noteJumpStartBeatOffset;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
 public enum Parity
 {
     None,
@@ -10,6 +11,7 @@ public enum Parity
     Reset
 }
 
+[System.Serializable]
 public struct PositioningData
 {
     public float angle;
@@ -17,6 +19,7 @@ public struct PositioningData
     public int y;
 }
 
+[System.Serializable]
 public struct BeatCutData
 {
     public Parity sliceParity;
@@ -91,6 +94,19 @@ public class SliceMap
         _walls = walls;
         _walls.Sort((x, y) => x.b.CompareTo(y.b));
         _cuts = GetCutData(_blocks, _bombs, walls, isRightHand);
+    }
+
+    public void WriteBeatCutDataToList(List<BeatCutData> inOutCutData)
+    {
+        if (inOutCutData == null)
+        {
+            inOutCutData = new List<BeatCutData>();
+        }
+
+        foreach (BeatCutData cutData in _cuts)
+        {
+            inOutCutData.Add(cutData);
+        }
     }
 
     List<BeatCutData> GetCutData(List<ColourNote> notes, List<BombNote> bombs, List<Obstacle> walls, bool isRightHand)

@@ -157,6 +157,11 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
     private void Update()
     {
+        if (_beatmap.Metadata.mapName.Length == 0)
+        {
+            return;
+        }
+
         foreach (GameObject go in _pendingRemoval)
         {
             _goInstances.Remove(go);
