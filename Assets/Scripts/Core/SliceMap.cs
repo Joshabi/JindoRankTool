@@ -203,7 +203,7 @@ public class SliceMap
         bool containsLeftmost = bombs.FindIndex(x => x.x == 1 + _playerXOffset && x.y == bombCheckLayer) != -1;
 
         // If there is a bomb, potentially a bomb reset
-        if ((_rightHand && containsLeftmost) || (!_rightHand && containsRightmost))
+        if ((!_rightHand && containsLeftmost) || (_rightHand && containsRightmost))
         {
             List<int> resetDirectionList = (lastCut.sliceParity == Parity.Forehand) ? forehandResetDict : backhandResetDict;
             if (resetDirectionList.Contains(lastCut.notesInCut[0].d)) {
