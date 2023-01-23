@@ -53,7 +53,7 @@ public class SliceMap
     { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
 
     private static readonly List<int> forehandResetDict = new List<int>()
-    { 1, 2, 3, 5, 6, 7 };
+    { 1, 2, 3, 6, 7 };
     private static readonly List<int> backhandResetDict = new List<int>()
     { 0, 4, 5 };
 
@@ -62,10 +62,12 @@ public class SliceMap
 
     private List<ColourNote> _blocks;
     private List<BombNote> _bombs;
+    private List<Obstacle> _walls;
     private List<BeatCutData> _cuts;
     private static bool _rightHand;
     private float _BPM = 0.0f;
     private int _playerXOffset = 0;
+    private float _lastWallTime = 0;
 
     public int GetSliceCount()
     {
@@ -77,7 +79,7 @@ public class SliceMap
         return _cuts[index];
     }
 
-    public SliceMap(float inBPM, List<ColourNote> blocks, List<BombNote> bombs, bool isRightHand)
+    public SliceMap(float inBPM, List<ColourNote> blocks, List<BombNote> bombs, List<Obstacle> walls, bool isRightHand)
     {
         _BPM = inBPM;
         _blocks = new List<ColourNote>(blocks);
@@ -85,10 +87,12 @@ public class SliceMap
         _blocks.Sort((x, y) => x.b.CompareTo(y.b));
         _bombs = bombs;
         _bombs.Sort((x, y) => x.b.CompareTo(y.b));
-        _cuts = GetCutData(_blocks, _bombs, isRightHand);
+        _walls = walls;
+        _walls.Sort((x, y) => x.b.CompareTo(y.b));
+        _cuts = GetCutData(_blocks, _bombs, walls, isRightHand);
     }
 
-    List<BeatCutData> GetCutData(List<ColourNote> notes, List<BombNote> bombs, bool isRightHand)
+    List<BeatCutData> GetCutData(List<ColourNote> notes, List<BombNote> bombs, List<Obstacle> walls, bool isRightHand)
     {
         _rightHand = isRightHand;
         List<BeatCutData> result = new List<BeatCutData>();
@@ -163,6 +167,25 @@ public class SliceMap
                 }
             }
 
+            // Work out current player XOffset for bomb calculations
+            List<Obstacle> wallsInBetween = walls.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[notesInSwing.Count - 1].b);
+            if(wallsInBetween.Count != 0) {
+                foreach(Obstacle wall in wallsInBetween)
+                {
+                    if (wall.x == 1 || wall.x == 0 && wall.w > 1) {
+                        _playerXOffset = 1;
+                        _lastWallTime = wall.b;
+                    } else if (wall.x == 2) {
+                        _playerXOffset = -1;
+                        _lastWallTime = wall.b;
+                    }
+                }
+            }
+
+            // If time since dodged exceeds a set amount in seconds, undo dodge
+            var undodgeCheckTime = 0.35f;
+            if (BeatToSeconds(_BPM, notesInSwing[notesInSwing.Count-1].b - _lastWallTime) > undodgeCheckTime) { _playerXOffset = 0; }
+
             // Work out Parity
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[notesInSwing.Count - 1].b);
             sData.sliceParity = ParityCheck(lastSwing, notesInSwing[0], bombsBetweenSwings);
@@ -231,6 +254,7 @@ public class SliceMap
         else { return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand; }
     }
 
+    #region Dots and Bombs Checks
     // Modifies a Swing if Dot Notes are involved
     public BeatCutData DotChecks(BeatCutData curSwing, BeatCutData lastSwing)
     {
@@ -288,16 +312,15 @@ public class SliceMap
         }
         return curSwing;
     }
-
-    #region Helper Functions
-
     // Attempts to fix the orientation in which a dot note is swung based on prior and post dot swings
     private List<BeatCutData> FixDotOrientation(List<BeatCutData> swings)
     {
         // For each note
-        for(int i = 0; i < swings.Count-1; i++) {
+        for (int i = 0; i < swings.Count - 1; i++)
+        {
             // If the swing involves a singular dot note
-            if(swings[i].notesInCut[0].d == 8 && swings[i].notesInCut.Count == 1) {
+            if (swings[i].notesInCut[0].d == 8 && swings[i].notesInCut.Count == 1)
+            {
 
                 // Get the previous swing and default the next swing
                 if (i - 1 < 0) continue;
@@ -305,17 +328,20 @@ public class SliceMap
                 BeatCutData postDotSwing = swings[i + 1];
 
                 // If the previous swing is also a dot, just skip to the next note so calculations arent repeated
-                if(previousSwing.notesInCut[0].d == 8) { continue; }
+                if (previousSwing.notesInCut[0].d == 8) { continue; }
 
                 // Currently 1 dot, loop through notes until we find a non-dot note
                 int dotsLength = 1;
-                for (int j = i; j < swings.Count - 1; j++) {
-                    if(swings[j].notesInCut[0].d == 8 && swings[j].notesInCut[swings[j].notesInCut.Count - 1].d == 8 && swings[j].notesInCut.Count > 1) {
+                for (int j = i; j < swings.Count - 1; j++)
+                {
+                    if (swings[j].notesInCut[0].d == 8 && swings[j].notesInCut[swings[j].notesInCut.Count - 1].d == 8 && swings[j].notesInCut.Count > 1)
+                    {
                         postDotSwing = previousSwing;
                         break;
                     }
 
-                    if (swings[j].notesInCut[0].d != 8 || swings[j].notesInCut[swings[j].notesInCut.Count - 1].d != 8) {
+                    if (swings[j].notesInCut[0].d != 8 || swings[j].notesInCut[swings[j].notesInCut.Count - 1].d != 8)
+                    {
                         // Get a reference to the non-dot swing and break
                         postDotSwing = swings[j];
                         break;
@@ -324,14 +350,16 @@ public class SliceMap
                 }
 
                 // If the dots go on for more then 3 consecutive hits
-                if(dotsLength > 2) {
+                if (dotsLength > 2)
+                {
                     if (_rightHand) postDotSwing.startPositioning.angle = Mathf.Clamp(postDotSwing.startPositioning.angle, -90, 0);
                     if (!_rightHand) postDotSwing.startPositioning.angle = Mathf.Clamp(postDotSwing.startPositioning.angle, 0, 90);
                     postDotSwing.endPositioning.angle = postDotSwing.startPositioning.angle;
                 }
 
                 // For every dot note, lerp the swing rotation
-                for(int k = 0; k < dotsLength; k++) {
+                for (int k = 0; k < dotsLength; k++)
+                {
                     BeatCutData swingToModify = swings[k + i];
                     swingToModify.startPositioning.angle = Mathf.Lerp(previousSwing.startPositioning.angle, postDotSwing.startPositioning.angle, dotsLength);
                     swingToModify.startPositioning.angle = Mathf.Clamp(swingToModify.startPositioning.angle, -90, 90);
@@ -342,7 +370,6 @@ public class SliceMap
         }
         return swings;
     }
-
     // Attempts to add bomb avoidance based on the isReset tag for a list of swings.
     // NOTE: To improve this, probably want bomb detection in its own function and these swings
     // would be added for each bomb in the sabers path rather then only for bomb resets.
@@ -356,21 +383,24 @@ public class SliceMap
             if (swings[i].isReset)
             {
                 // Reference to last swing
-                ColourNote lastHitNote = swings[i-1].notesInCut[swings[i-1].notesInCut.Count - 1];
+                ColourNote lastHitNote = swings[i - 1].notesInCut[swings[i - 1].notesInCut.Count - 1];
 
                 // Create a new swing with inverse parity to the last.
                 BeatCutData emptySwing = new BeatCutData();
                 emptySwing.sliceParity = (swings[i].sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
-                emptySwing.sliceStartBeat = swings[i-1].sliceEndBeat + SecondsToBeats(_BPM, 0.1f);
+                emptySwing.sliceStartBeat = swings[i - 1].sliceEndBeat + SecondsToBeats(_BPM, 0.1f);
                 emptySwing.sliceEndBeat = emptySwing.sliceStartBeat + 0.2f;
                 emptySwing.startPositioning.x = lastHitNote.x;
                 emptySwing.startPositioning.y = lastHitNote.y;
 
                 // If the last hit was a dot, pick the opposing direction based on parity.
-                if (lastHitNote.d == 8) {
+                if (lastHitNote.d == 8)
+                {
                     emptySwing.startPositioning.angle = (emptySwing.sliceParity == Parity.Forehand) ?
                         rightForehandDict[1] : rightBackhandDict[0];
-                } else {
+                }
+                else
+                {
                     // If the last hit was arrowed, figure out the opposing cut direction and use that.
                     emptySwing.startPositioning.angle = (emptySwing.sliceParity == Parity.Forehand) ?
                         rightForehandDict[opposingCutDict[lastHitNote.d]] :
@@ -391,7 +421,9 @@ public class SliceMap
         }
         return result;
     }
+    #endregion
 
+    #region Helper Functions
     // Given a cut direction ID, return angle from appropriate dictionary
     private float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
