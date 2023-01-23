@@ -93,7 +93,7 @@ public class SliceMap
         _rightHand = isRightHand;
         List<BeatCutData> result = new List<BeatCutData>();
 
-        float sliderPrecision = 1 / 10f;
+        float sliderPrecision = 1 / 6f;
         List<ColourNote> notesInSwing = new List<ColourNote>();
 
         for (int i = 0; i < notes.Count - 1; i++)
@@ -282,11 +282,9 @@ public class SliceMap
         } else if (curSwing.notesInCut[0].d == 8 && curSwing.notesInCut[curSwing.notesInCut.Count-1].d != 8) {
             // In the event its a dot then an arrow
             curSwing.startPositioning.angle = AngleGivenCutDirection(curSwing.notesInCut[curSwing.notesInCut.Count - 1].d, curSwing.sliceParity);
-            curSwing.endPositioning.angle = curSwing.startPositioning.angle;
-        } else if (curSwing.notesInCut[0].d != 8 && curSwing.notesInCut[curSwing.notesInCut.Count - 1].d == 8) {
-            // In the event its an arrow, then a dot
-            curSwing.startPositioning.angle = AngleGivenCutDirection(curSwing.notesInCut[0].d, curSwing.sliceParity);
-            curSwing.endPositioning.angle = curSwing.startPositioning.angle;
+            curSwing.endPositioning.angle = (curSwing.sliceParity == Parity.Forehand) ?
+                rightForehandDict[curSwing.notesInCut[curSwing.notesInCut.Count - 1].d] :
+                rightBackhandDict[curSwing.notesInCut[curSwing.notesInCut.Count - 1].d];
         }
         return curSwing;
     }
