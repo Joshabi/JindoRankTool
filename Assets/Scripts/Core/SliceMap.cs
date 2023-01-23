@@ -266,6 +266,7 @@ public class SliceMap
         }
         return curSwing;
     }
+
     // Attempts to fix the orientation in which a dot note is swung based on prior and post dot swings
     private List<BeatCutData> FixDotOrientation(List<BeatCutData> swings)
     {
@@ -275,55 +276,44 @@ public class SliceMap
             // If the swing involves a singular dot note
             if (swings[i].notesInCut[0].d == 8 && swings[i].notesInCut.Count == 1)
             {
-
                 // Get the previous swing and default the next swing
                 if (i - 1 < 0) continue;
                 BeatCutData previousSwing = swings[i - 1];
-                BeatCutData postDotSwing = swings[i + 1];
+                BeatCutData currentSwing = swings[i];
 
-                // If the previous swing is also a dot, just skip to the next note so calculations arent repeated
-                if (previousSwing.notesInCut[0].d == 8) { continue; }
+                // Get the previous and current notes
+                ColourNote prevNote = previousSwing.notesInCut[previousSwing.notesInCut.Count - 1];
+                ColourNote currentNote = currentSwing.notesInCut[0];
 
-                // Currently 1 dot, loop through notes until we find a non-dot note
-                int dotsLength = 1;
-                for (int j = i; j < swings.Count - 1; j++)
-                {
-                    if (swings[j].notesInCut[0].d == 8 && swings[j].notesInCut[swings[j].notesInCut.Count - 1].d == 8 && swings[j].notesInCut.Count > 1)
-                    {
-                        postDotSwing = previousSwing;
-                        break;
-                    }
-
-                    if (swings[j].notesInCut[0].d != 8 || swings[j].notesInCut[swings[j].notesInCut.Count - 1].d != 8)
-                    {
-                        // Get a reference to the non-dot swing and break
-                        postDotSwing = swings[j];
-                        break;
-                    }
-                    dotsLength++;
+                if(prevNote.d != 8) {
+                    currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
+                        ForehandDict[opposingCutDict[prevNote.d]] :
+                        BackhandDict[opposingCutDict[prevNote.d]];
+                    currentSwing.endPositioning.angle = currentSwing.startPositioning.angle;
+                    swings[i] = currentSwing;
+                    continue;
                 }
 
-                // If the dots go on for more then 3 consecutive hits
-                if (dotsLength > 2)
-                {
-                    if (_rightHand) postDotSwing.startPositioning.angle = Mathf.Clamp(postDotSwing.startPositioning.angle, -90, 0);
-                    if (!_rightHand) postDotSwing.startPositioning.angle = Mathf.Clamp(postDotSwing.startPositioning.angle, 0, 90);
-                    postDotSwing.endPositioning.angle = postDotSwing.startPositioning.angle;
+                // If the notes are on the same layer, generate the angle based on the end and starting hand positions
+                Vector2 lastHandCoords = new Vector2(previousSwing.endPositioning.x, previousSwing.endPositioning.y);
+                Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
+                float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
+                if (currentSwing.sliceParity == Parity.Backhand) {
+                    if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
                 }
 
-                // For every dot note, lerp the swing rotation
-                for (int k = 0; k < dotsLength; k++)
-                {
-                    BeatCutData swingToModify = swings[k + i];
-                    swingToModify.startPositioning.angle = Mathf.Lerp(previousSwing.startPositioning.angle, postDotSwing.startPositioning.angle, dotsLength);
-                    swingToModify.startPositioning.angle = Mathf.Clamp(swingToModify.startPositioning.angle, -90, 90);
-                    swingToModify.endPositioning.angle = swingToModify.startPositioning.angle;
-                    swings[k + i] = swingToModify;
-                }
+                // Flip for left hand
+                if (!_rightHand) angle *= -1;
+
+                // Clamp the angle, flip if a forehand hit, set the angle and change that in the swings list.
+                currentSwing.startPositioning.angle = angle;
+                currentSwing.endPositioning.angle = angle;
+                swings[i] = currentSwing;
             }
         }
         return swings;
     }
+
     // Attempts to add bomb avoidance based on the isReset tag for a list of swings.
     // NOTE: To improve this, probably want bomb detection in its own function and these swings
     // would be added for each bomb in the sabers path rather then only for bomb resets.
