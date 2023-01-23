@@ -535,7 +535,7 @@ MonoBehaviour:
   _timingDataText: {fileID: 425144535}
   _leftSaberDataText: {fileID: 74163854}
   _rightSaberDataText: {fileID: 1674964575}
-  _startTime: 200
+  _startTime: 0
 --- !u!114 &453708159
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -548,8 +548,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 028a8d0594ba28441ad266b4c6fc580b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _customLevelPath: D:\SteamLibrary\steamapps\common\Beat Saber\Beat Saber_Data\CustomLevels\1ff88
-    (Night Xrose vs. Day Xrose - ANOMALY)
+  _customLevelPath: Path to the custom map goes here
   _desiredDifficulty: 4
   _levelLoader: {fileID: 453708157}
   _levelPreview: {fileID: 453708158}
