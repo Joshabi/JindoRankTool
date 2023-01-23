@@ -34,8 +34,9 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
     private float _startBeatOffset = 0.0f;
     private float _beatsPerSecond = 0.0f;
-    private List<ColourNote> _blocks;
-    private List<BombNote> _bombs;
+    private List<ColourNote> _blocks = new List<ColourNote>();
+    private List<BombNote> _bombs = new List<BombNote>();
+    private List<Obstacle> _obstacles = new List<Obstacle>();
     private int _blockIndex = 0;
     private int _bombIndex = 0;
 
@@ -135,9 +136,14 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             _bombs.Add(bomb);
         }
         _bombs.Sort((x, y) => x.b.CompareTo(y.b));
+        foreach(Obstacle obst in _beatmap.BeatData.obstacles)
+        {
+            _obstacles.Add(obst);
+        }
+        _obstacles.Sort((x, y) => x.b.CompareTo(y.b));
 
-        _sliceMapRight = new SliceMap(_beatmap.Metadata.bpm, _blocks, _bombs, true);
-        _sliceMapLeft = new SliceMap(_beatmap.Metadata.bpm, _blocks, _bombs, false);
+        _sliceMapRight = new SliceMap(_beatmap.Metadata.bpm, _blocks, _bombs, _obstacles, true);
+        _sliceMapLeft = new SliceMap(_beatmap.Metadata.bpm, _blocks, _bombs, _obstacles, false);
         _leftSliceIndex = 0;
         _rightSliceIndex = 0;
 
