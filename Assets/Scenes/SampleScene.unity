@@ -549,7 +549,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _customLevelPath: Path to the custom map goes here
-  _desiredDifficulty: 4
+  _desiredDifficulty: 1
   _levelLoader: {fileID: 453708157}
   _levelPreview: {fileID: 453708158}
   _mapNameTextField: {fileID: 1548289287}

@@ -11,9 +11,9 @@ public class LevelLoader : MonoBehaviour
 
     public LevelStructure _loadedLevel;
     public List<BeatmapData> _loadedBeatmaps;
-    private int _desiredDifficulty = 0;
+    private BeatmapDifficultyRank _desiredDifficulty = 0;
 
-    public void LoadLevel(string levelFolder, int desiredDiff)
+    public void LoadLevel(string levelFolder, BeatmapDifficultyRank desiredDiff)
     {
         _desiredDifficulty = desiredDiff;
         string infoDatFile = levelFolder + "/info.dat";
@@ -84,8 +84,20 @@ public class LevelLoader : MonoBehaviour
     {
         if (OnLevelLoaded != null)
         {
-            int diff = Mathf.Min(_desiredDifficulty, _loadedBeatmaps.Count - 1);
-            OnLevelLoaded(audio, _loadedBeatmaps[diff]);
+            bool levelFound = false;
+            foreach (BeatmapData beatmap in _loadedBeatmaps)
+            {
+                if (beatmap.Metadata._difficultyRank == _desiredDifficulty)
+                {
+                    OnLevelLoaded(audio, beatmap);
+                    levelFound = true;
+                    break;
+                }
+            }
+            if (!levelFound && _loadedBeatmaps.Count > 0)
+            {
+                OnLevelLoaded(audio, _loadedBeatmaps[0]);
+            }
         }
         else
         {

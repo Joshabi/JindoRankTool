@@ -7,7 +7,7 @@ public class JindoRankTool : MonoBehaviour
 {
 
     [SerializeField] private string _customLevelPath;
-    [SerializeField] private int _desiredDifficulty;
+    [SerializeField] private BeatmapDifficultyRank _desiredDifficulty;
     [SerializeField] private LevelLoader _levelLoader;
     [SerializeField] private LevelPreview _levelPreview;
     [SerializeField] private Text _mapNameTextField;
@@ -29,7 +29,7 @@ public class JindoRankTool : MonoBehaviour
         {
             //if (!_levelPreview.IsPreviewing())
             //{
-            _mapNameTextField.text = beatmapData.Metadata.mapName + " (" + GetDifficultyString(_desiredDifficulty) + ")";
+            _mapNameTextField.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
                 _levelPreview.SetBeatmap(levelAudio, beatmapData);
             //}
         }
@@ -37,18 +37,5 @@ public class JindoRankTool : MonoBehaviour
         {
             Debug.LogError("Null level preview");
         }
-    }
-
-    private string GetDifficultyString(int diff)
-    {
-        switch (diff)
-        {
-            case 0: return "Easy";
-            case 1: return "Normal";
-            case 2: return "Hard";
-            case 3: return "Expert";
-            case 4: return "Expert+";
-        }
-        return "Other";
     }
 }
