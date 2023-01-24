@@ -13,9 +13,11 @@ public class ResetParityCheck : IParityMethod
         // Rotating the hand inwards goes positive, and outwards negative
         // Using a list of definitions, turn cut direction into an angle, and check
         // if said angle makes sense.
-        var nextAFN = (lastCut.sliceParity != Parity.Forehand) ?
+        var angleChange = (lastCut.sliceParity != Parity.Forehand) ?
             SliceMap.BackhandDict[lastCut.notesInCut[0].d] - SliceMap.ForehandDict[nextNote.d] :
             SliceMap.ForehandDict[lastCut.notesInCut[0].d] - SliceMap.BackhandDict[nextNote.d];
+
+        #region Bomb Reset Checks
 
         // Checks if either bomb reset bomb locations exist
         var bombCheckLayer = (lastCut.sliceParity == Parity.Forehand) ? 0 : 2;
@@ -32,13 +34,15 @@ public class ResetParityCheck : IParityMethod
             }
         }
 
+        #endregion
+
         // If note is a dot, play it as a down hit
         if (nextNote.d == 8 && nextNote.y == 0) { return Parity.Forehand; }
         // If note is a left or right hit in the outerlane, hit as down
         if ((nextNote.d == 3 || nextNote.d == 4) && (nextNote.x == 0 || nextNote.x == 3) && (nextNote.y == 0)) { return Parity.Forehand; }
 
-        // If the next AFN exceeds 180 or -180, this means the algo had to triangle / reset
-        if (Mathf.Abs(nextAFN) > 90)
+        // If the angle change exceeds 180 then triangle
+        if (Mathf.Abs(angleChange) > 90)
         {
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }
