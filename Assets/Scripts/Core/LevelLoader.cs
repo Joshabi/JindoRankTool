@@ -41,6 +41,7 @@ public class LevelLoader
                         beatmap.Metadata.bpm = loadedLevel._beatsPerMinute;
                         if (loadedLevel._songName.Contains("/")) { loadedLevel._songName = loadedLevel._songName.Replace("/", string.Empty); }
                         beatmap.Metadata.mapName = loadedLevel._songName;
+                        beatmap.Metadata.songFilename = loadedLevel._songFilename;
                         beatmap.BeatData = beatDataV3;
 
                         if (onLevelLoadCallback != null)

@@ -120,6 +120,7 @@ public struct BeatmapStructure
     public object _customData;
     public float bpm;
     public string mapName;
+    public string songFilename;
 }
 
 [System.Serializable]

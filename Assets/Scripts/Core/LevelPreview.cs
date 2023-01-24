@@ -118,7 +118,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         {
             _beatmap = beatmapData;
             _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
-            _levelAudioLoader.LoadSong(_currentMapDirectory + "/song.egg", OnLevelAudioLoaded);
+            _levelAudioLoader.LoadSong(_currentMapDirectory + "/" + beatmapData.Metadata.songFilename, OnLevelAudioLoaded);
         }
     }
 
