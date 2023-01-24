@@ -203,7 +203,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             if (_beatTime > cutData.sliceStartBeat - _startBeatOffset)
             {
                 _leftSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
-                _leftSaber.SetTargetWristOrientation(cutData.startPositioning.angle);
+                _leftSaber.SetTargetWristOrientation(cutData.startPositioning.angle * -1);
             }
             if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
