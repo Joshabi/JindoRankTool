@@ -22,19 +22,25 @@ public class SaberController : MonoBehaviour
     private float _maxWristOrientDrag = 120.0f;
     private float _maxPalmOrientDrag = 50.0f;
     private float _maxWristPositDrag = 120.0f;
-    private float _minWristOrientDrag = 30.0f;
+    private float _minWristOrientDrag = 40.0f;
     private float _minPalmOrientDrag = 24.0f;
-    private float _minWristPositDrag = 30.0f;
+    private float _minWristPositDrag = 40.0f;
     private float _wristOrientDrag;
     private float _palmOrientDrag;
     private float _wristPositDrag;
-    
+    private float _targetWristOrientDrag;
+    private float _targetPalmOrientDrag;
+    private float _targetWristPositDrag;
+
     // Start is called before the first frame update
     void Awake()
     {
         _wristOrientDrag = _maxWristOrientDrag;
         _palmOrientDrag = _maxPalmOrientDrag;
         _wristPositDrag = _maxWristPositDrag;
+        _targetWristOrientDrag = _wristOrientDrag;
+        _targetPalmOrientDrag = _palmOrientDrag;
+        _targetWristPositDrag = _wristPositDrag;
         _wrist = new GameObject("wrist");
         _wrist.transform.parent = transform;
         _palm = new GameObject("palm");
@@ -50,8 +56,11 @@ public class SaberController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        _wristOrientation -= (_wristOrientation - _targetWristOrientation) / _wristOrientDrag;
-        _palmOrientation -= (_palmOrientation - _targetPalmOrientation) / _palmOrientDrag;
+        _wristOrientDrag -= (_wristOrientDrag - _targetWristOrientDrag) / 10.0f;
+        _palmOrientDrag -= (_palmOrientDrag - _targetPalmOrientDrag) / 5.0f;
+        _wristPositDrag -= (_wristPositDrag - _targetWristPositDrag) / 10.0f;
+        _wristOrientation -= (_wristOrientation - (_targetWristOrientation + 5.0f*Mathf.Sin(Time.time))) / _wristOrientDrag;
+        _palmOrientation -= (_palmOrientation - (_targetPalmOrientation + 5.0f*Mathf.Cos(Time.time))) / _palmOrientDrag;
         _wristPosition -= (_wristPosition - _targetWristPosition) / _wristPositDrag;
         Vector3 pos = _wrist.transform.position;
         pos.x = _wristPosition.x;
@@ -113,9 +122,9 @@ public class SaberController : MonoBehaviour
     {
         if (t < 0.2f)
         {
-            _wristOrientDrag = _minWristOrientDrag;
-            _palmOrientDrag = _minPalmOrientDrag;
-            _wristPositDrag = _minWristPositDrag;
+            _targetWristOrientDrag = _minWristOrientDrag;
+            _targetPalmOrientDrag = _minPalmOrientDrag;
+            _targetWristPositDrag = _minWristPositDrag;
         }
         else
         {
@@ -124,10 +133,16 @@ public class SaberController : MonoBehaviour
 
             float u = Mathf.Clamp((t - 0.2f), 0.0f, 1.0f);
 
-            _wristOrientDrag = Mathf.Lerp(_minWristOrientDrag, _maxWristOrientDrag, u) / Time.timeScale;
-            _palmOrientDrag = Mathf.Lerp(_minPalmOrientDrag, _maxPalmOrientDrag, u) / Time.timeScale;
-            _wristPositDrag = Mathf.Lerp(_minWristPositDrag, _maxWristPositDrag, u) / Time.timeScale;
+            _targetWristOrientDrag = Mathf.Lerp(_minWristOrientDrag, _maxWristOrientDrag, u) / Time.timeScale;
+            _targetPalmOrientDrag = Mathf.Lerp(_minPalmOrientDrag, _maxPalmOrientDrag, u) / Time.timeScale;
+            _targetWristPositDrag = Mathf.Lerp(_minWristPositDrag, _maxWristPositDrag, u) / Time.timeScale;
         }
+    }
+
+    public void SetRestingTargets()
+    {
+        SetTargetWristPosition((int)_restingWristPosition.x, (int)_restingWristPosition.y);
+        SetTargetWristOrientation(_restingWristOrientation);
     }
 
 }

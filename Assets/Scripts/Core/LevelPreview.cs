@@ -59,6 +59,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     private bool _isPreviewing = false;
     private float _timeToReachSabers;
     private float _beatTimeToReachSabers;
+    private float _beatTimeToPrepareSwing;
     private float _BPM;
 
     private void Awake()
@@ -73,15 +74,17 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _leftSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
         _leftSaber.transform.position = Vector3.zero;
         _leftSaber.SetSaberColour(GetLeftColour());
-        _leftSaber.SetRestingWristPosition(1, 1);
-        _leftSaber.SetRestingWristOrientation(0.0f);
+        _leftSaber.SetRestingWristPosition(0, 1);
+        _leftSaber.SetRestingWristOrientation(10.0f);
         _rightSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
         _rightSaber.SetSaberColour(GetRightColour());
         _rightSaber.transform.position = Vector3.zero;
-        _rightSaber.SetRestingWristPosition(2, 1);
-        _rightSaber.SetRestingWristOrientation(0.0f);
+        _rightSaber.SetRestingWristPosition(3, 1);
+        _rightSaber.SetRestingWristOrientation(-10.0f);
         _leftSaber.SetSaberZ(_saberZ);
         _rightSaber.SetSaberZ(_saberZ);
+        _leftSaber.SetRestingTargets();
+        _rightSaber.SetRestingTargets();
     }
 
     public Color GetLeftColour()
@@ -143,6 +146,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
         _beatmap = inBeatmapData;
         _beatTimeToReachSabers = TimeUtils.SecondsToBeats(_BPM, _timeToReachSabers);
+        _beatTimeToPrepareSwing = _beatTimeToReachSabers * 0.5f;
 
         if (_audioSource != null)
         {
@@ -243,7 +247,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         if (_leftSliceIndex < _sliceMapLeft.GetSliceCount())
         {
             BeatCutData cutData = _sliceMapLeft.GetBeatCutData(_leftSliceIndex);
-            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset)
+            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToPrepareSwing)
             {
                 _leftSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
                 _leftSaber.SetTargetWristOrientation(cutData.startPositioning.angle * -1);
