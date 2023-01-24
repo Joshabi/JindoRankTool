@@ -54,7 +54,7 @@ public class LevelSliceMapOutputter
         List<LevelSliceMapAnalyticsObject> analytics = new List<LevelSliceMapAnalyticsObject>();
         foreach (ISliceMapAnalyser analyser in _analysers.Values)
         {
-            analyser.ProcessSliceMaps(leftHandSliceMap, rightHandSliceMap);
+            analyser.ProcessSliceMaps(beatmapData.Metadata, leftHandSliceMap, rightHandSliceMap);
 
             LevelSliceMapAnalyticsObject analyserObject = new LevelSliceMapAnalyticsObject();
             analyserObject.name = analyser.GetAnalyticsName();

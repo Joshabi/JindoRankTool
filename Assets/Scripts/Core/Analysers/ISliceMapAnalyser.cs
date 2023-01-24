@@ -5,7 +5,7 @@ using UnityEngine;
 public interface ISliceMapAnalyser
 {
 
-    void ProcessSliceMaps(SliceMap leftHand, SliceMap rightHand);
+    void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand);
 
     string GetAnalyticsName();
 
