@@ -17,6 +17,7 @@ public class SaberController : MonoBehaviour
     private float _targetPalmOrientation;
     private Vector2 _restingWristPosition;
     private Vector2 _targetWristPosition;
+    private float _EBPM;
     private float _saberZ;
     private Color _saberColour;
     private float _maxWristOrientDrag = 120.0f;
@@ -111,6 +112,11 @@ public class SaberController : MonoBehaviour
         {
             _saberColour = c;
         }
+    }
+
+    public void SetTargetEBPM(float bpm)
+    {
+        _EBPM = bpm;
     }
 
     public void SetSaberZ(float inZ)
