@@ -128,8 +128,9 @@ public class SliceMap
             // checks to figure out if it is a slider, window, stack ect..
             if (Mathf.Abs(currentNote.b - nextNote.b) <= sliderPrecision) {
                 if (nextNote.d == 8 || notesInSwing[notesInSwing.Count-1].d == 8 ||
-                    currentNote.d == nextNote.d || Mathf.Abs(ForehandDict[currentNote.d] - ForehandDict[nextNote.d]) <= 45)
-                { continue; }
+                    currentNote.d == nextNote.d || Mathf.Abs(ForehandDict[currentNote.d] - ForehandDict[nextNote.d]) <= 45 ||
+                     Mathf.Abs(BackhandDict[currentNote.d] - BackhandDict[nextNote.d]) <= 45)
+                    { continue; }
             }
 
             // Assume by default swinging forehanded
@@ -214,13 +215,21 @@ public class SliceMap
                 sData = DotChecks(sData, result[result.Count - 1]);
             }
 
+            // If dot, re-orientate
+            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) sData = FixDotOrientation(lastSwing, sData);
+
             if (sData.sliceParity == lastSwing.sliceParity) { sData.isReset = true; }
+
+            if (_parityMethodology.UpsideDown == true)
+            {
+                sData.startPositioning.angle *= -1;
+                sData.endPositioning.angle *= -1;
+            }
 
             // Add swing to list
             result.Add(sData);
             notesInSwing.Clear();
         }
-        result = FixDotOrientation(result);
         result = AddBombResetAvoidance(result);
         return result;
     }
@@ -261,19 +270,12 @@ public class SliceMap
                     curSwing.endPositioning.y = curSwing.notesInCut[curSwing.notesInCut.Count - 1].y;
                 }
 
-                if (curSwing.startPositioning.angle == 180) curSwing.startPositioning.angle *= -1;
+                // Can possibly remove? Fixes weird backhand down stack hits for the right hand? Not sure why
+                if (curSwing.startPositioning.angle == 180 && _rightHand) curSwing.startPositioning.angle *= -1;
 
                 // Set ending angle equal to starting angle
                 curSwing.endPositioning.angle = curSwing.startPositioning.angle;
 
-            } else {
-
-                // If its only a single note and its a dot, cut it in the opposing direction to the last swing (assuming that wasnt a dot)
-                if (lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d != 8)
-                {
-                    curSwing.startPositioning.angle = AngleGivenCutDirection(opposingCutDict[lastSwing.notesInCut[lastSwing.notesInCut.Count - 1].d], curSwing.sliceParity);
-                    curSwing.endPositioning.angle = curSwing.startPositioning.angle;
-                }
             }
         } else if (curSwing.notesInCut[0].d == 8 && curSwing.notesInCut[curSwing.notesInCut.Count-1].d != 8) {
             // In the event its a dot then an arrow
@@ -286,53 +288,44 @@ public class SliceMap
     }
 
     // Attempts to fix the orientation in which a dot note is swung based on prior and post dot swings
-    private List<BeatCutData> FixDotOrientation(List<BeatCutData> swings)
+    private BeatCutData FixDotOrientation(BeatCutData previousSwing, BeatCutData currentSwing)
     {
-        // For each note
-        for (int i = 0; i < swings.Count - 1; i++)
-        {
-            // If the swing involves a singular dot note
-            if (swings[i].notesInCut[0].d == 8 && swings[i].notesInCut.Count == 1)
+        // Get the previous and current notes
+        ColourNote prevNote = previousSwing.notesInCut[previousSwing.notesInCut.Count - 1];
+        ColourNote currentNote = currentSwing.notesInCut[0];
+
+        if (prevNote.d != 8) {
+            currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
+                AngleGivenCutDirection(opposingCutDict[prevNote.d], Parity.Forehand) :
+                AngleGivenCutDirection(opposingCutDict[prevNote.d], Parity.Backhand) ;
+
+            // If non-upside down hit for this dot
+            if(!(previousSwing.startPositioning.angle == 180 && !_rightHand) && !(previousSwing.startPositioning.angle == -180 && _rightHand))
             {
-                // Get the previous swing and default the next swing
-                if (i - 1 < 0) continue;
-                BeatCutData previousSwing = swings[i - 1];
-                BeatCutData currentSwing = swings[i];
-
-                // Get the previous and current notes
-                ColourNote prevNote = previousSwing.notesInCut[previousSwing.notesInCut.Count - 1];
-                ColourNote currentNote = currentSwing.notesInCut[0];
-
-                if(prevNote.d != 8) {
-                    currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                        ForehandDict[opposingCutDict[prevNote.d]] :
-                        BackhandDict[opposingCutDict[prevNote.d]];
-                    currentSwing.endPositioning.angle = currentSwing.startPositioning.angle;
-                    swings[i] = currentSwing;
-                    continue;
-                }
-
-                // If the notes are on the same layer, generate the angle based on the end and starting hand positions
-                Vector2 lastHandCoords = new Vector2(previousSwing.endPositioning.x, previousSwing.endPositioning.y);
-                Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
-                float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
-                if (currentSwing.sliceParity == Parity.Backhand) {
-                    if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
-                }
-
-                // Flip for left hand
-                if (!_rightHand) angle *= -1;
-
-                // Applies some clamping in certain situations to prevent aggressive swing orientation
-                angle = Mathf.Clamp(angle, -90, 90);
-                if (currentNote.y != prevNote.y) angle = Mathf.Clamp(angle, -45, 45);
-
-                currentSwing.startPositioning.angle = angle;
-                currentSwing.endPositioning.angle = angle;
-                swings[i] = currentSwing;
+                // DO SOMETHING HERE FOR THESE FUCKING NOTES
             }
+            currentSwing.endPositioning.angle = currentSwing.startPositioning.angle;
+        } else {
+            // If the notes are on the same layer, generate the angle based on the end and starting hand positions
+            Vector2 lastHandCoords = new Vector2(previousSwing.endPositioning.x, previousSwing.endPositioning.y);
+            Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
+            float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
+            
+            // Correct the angle for backhand hits
+            if (currentSwing.sliceParity == Parity.Backhand) {
+                if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
+            }
+
+            // Flip for left hand
+            if (!_rightHand) angle *= -1;
+
+            angle = Mathf.Clamp(angle, -90, 90);
+            if (currentNote.y != prevNote.y) angle = Mathf.Clamp(angle, -45, 45);
+
+            currentSwing.startPositioning.angle = angle;
+            currentSwing.endPositioning.angle = angle;
         }
-        return swings;
+        return currentSwing;
     }
 
     // Attempts to add bomb avoidance based on the isReset tag for a list of swings.
@@ -371,7 +364,6 @@ public class SliceMap
                         ForehandDict[opposingCutDict[lastHitNote.d]] :
                         BackhandDict[opposingCutDict[lastHitNote.d]];
                 }
-
                 // End angle should be the same as the start angle
                 emptySwing.endPositioning.angle = emptySwing.startPositioning.angle;
 
@@ -380,6 +372,18 @@ public class SliceMap
                 Vector2 endPosition = new Vector2(dir.x * 2f, dir.y * 2f);
                 emptySwing.endPositioning.x = (int)endPosition.x;
                 emptySwing.endPositioning.y = (int)endPosition.y;
+
+                // If swing after reset is a singular dot note, Then based on parity set its swing direction
+                if (swings[i + 1].notesInCut[0].d == 8 && swings[i + 2].notesInCut.Count == 1)
+                {
+                    if (emptySwing.sliceParity == Parity.Backhand)
+                    {
+                        BeatCutData postResetSwing = result[i + 2];
+                        postResetSwing.startPositioning.angle = 0;
+                        result[i + 2] = postResetSwing;
+                    }
+                }
+
                 result.Insert(i + swingsAdded, emptySwing);
                 swingsAdded++;
             }
@@ -399,7 +403,7 @@ public class SliceMap
         Vector3 firstNoteCoords = new Vector3(firstNote.x, firstNote.y, 0);
         Vector3 lastNoteCoords = new Vector3 (lastNote.x, lastNote.y, 0);
         float angle = Vector3.SignedAngle(Vector3.up, lastNoteCoords - firstNoteCoords, Vector3.forward);
-        if (!_rightHand && Mathf.Abs(angle) > 0) angle *= -1;
+        if (!_rightHand) angle *= -1;
         return angle;
     }
     // Determines if a Note is inverted
