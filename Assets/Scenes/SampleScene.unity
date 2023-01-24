@@ -454,6 +454,7 @@ GameObject:
   - component: {fileID: 453708160}
   - component: {fileID: 453708159}
   - component: {fileID: 453708158}
+  - component: {fileID: 453708162}
   - component: {fileID: 453708157}
   - component: {fileID: 453708161}
   m_Layer: 0
@@ -472,27 +473,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 453708156}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7bd2c5ef69df7be46ab1456fc4fdca3e, type: 3}
+  m_Script: {fileID: 11500000, guid: c76f9d3903eff8249b0cb8b6b1b970e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _loadedLevel:
-    _version: 
-    _songName: 
-    _songSubName: 
-    _songAuthorName: 
-    _levelAuthorName: 
-    _beatsPerMinute: 0
-    _shuffle: 0
-    _shufflePeriod: 0
-    _previewStartTime: 0
-    _previewDuration: 0
-    _songFilename: 
-    _coverImageFilename: 
-    _environmentName: 
-    _allDirectionsEnvironmentName: 
-    _songTimeOffset: 0
-    _difficultyBeatmapSets: []
-  _loadedBeatmaps: []
 --- !u!114 &453708158
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -505,6 +488,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39281fdca99708846bd3674e3a7b8962, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _levelAudioLoader: {fileID: 0}
   _audioSource: {fileID: 453708161}
   _beatmap:
     Metadata:
@@ -532,6 +516,7 @@ MonoBehaviour:
   _leftColour: {r: 1, g: 0.4710667, b: 0, a: 0}
   _rightColour: {r: 0, g: 0.8077564, b: 1, a: 0}
   _saberZ: -30
+  _mapNameText: {fileID: 1548289287}
   _timingDataText: {fileID: 425144535}
   _leftSaberDataText: {fileID: 74163854}
   _rightSaberDataText: {fileID: 1674964575}
@@ -550,9 +535,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _customLevelPath: Path to the custom map goes here
   _desiredDifficulty: 1
-  _levelLoader: {fileID: 453708157}
-  _levelPreview: {fileID: 453708158}
-  _mapNameTextField: {fileID: 1548289287}
+  _previewMap: 0
+  _beatSaberMapIDCSV: 
   _timeScale: 1
 --- !u!4 &453708160
 Transform:
@@ -664,6 +648,18 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &453708162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 453708156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bfeb2be649ec0c4b88deac5ad13a278, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0

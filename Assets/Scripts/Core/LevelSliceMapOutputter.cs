@@ -23,11 +23,9 @@ public class LevelSliceMapOutputter
 
     Dictionary<System.Guid, ISliceMapAnalyser> _analysers;
 
-    public LevelSliceMapOutputter(LevelLoader levelLoader)
+    public LevelSliceMapOutputter()
     {
         _analysers = new Dictionary<System.Guid, ISliceMapAnalyser>();
-
-        levelLoader.OnLevelLoaded += LevelLoader_OnLevelLoaded;
     }
 
     public System.Guid RegisterAnalyser(ISliceMapAnalyser inAnalyser)
@@ -42,7 +40,7 @@ public class LevelSliceMapOutputter
         return _analysers.Remove(inAnalyserID);
     }
 
-    private void LevelLoader_OnLevelLoaded(AudioClip levelAudio, BeatmapData beatmapData)
+    public void ProcessBeatmap(BeatmapData beatmapData)
     {
         SliceMap rightHandSliceMap = new SliceMap(beatmapData.Metadata.bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: true);
         SliceMap leftHandSliceMap = new SliceMap(beatmapData.Metadata.bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: false);
