@@ -3,6 +3,9 @@ using UnityEngine;
 
 public class ResetParityCheck : IParityMethod
 {
+    public bool UpsideDown { get { return _upsideDown; } }
+    private bool _upsideDown;
+
     public Parity ParityCheck(BeatCutData lastCut, ColourNote nextNote, List<BombNote> bombs, float playerXOffset, bool rightHand)
     {
         // AFN: Angle from neutral
