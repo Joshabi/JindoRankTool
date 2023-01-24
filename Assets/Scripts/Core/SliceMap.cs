@@ -296,7 +296,6 @@ public class SliceMap
             currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
                 AngleGivenCutDirection(opposingCutDict[prevNote.d], Parity.Forehand) :
                 AngleGivenCutDirection(opposingCutDict[prevNote.d], Parity.Backhand) ;
-            currentSwing.startPositioning.angle = Mathf.Clamp(currentSwing.startPositioning.angle, -45, 45);
             currentSwing.endPositioning.angle = currentSwing.startPositioning.angle;
         } else {
             // If the notes are on the same layer, generate the angle based on the end and starting hand positions
@@ -305,16 +304,7 @@ public class SliceMap
             float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
 
             // Right hand directional correction
-            if (_rightHand && currentSwing.sliceParity == Parity.Backhand)
-            {
-                if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
-            }
-
-            // Left hand directional correction
-            if (!_rightHand && currentSwing.sliceParity == Parity.Forehand)
-            {
-                if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
-            }
+            if(currentSwing.sliceParity == Parity.Forehand && !_rightHand) if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
 
             // Applies some clamping in certain situations to prevent aggressive swing orientation
             angle = Mathf.Clamp(angle, -90, 90);
@@ -362,7 +352,6 @@ public class SliceMap
                         ForehandDict[opposingCutDict[lastHitNote.d]] :
                         BackhandDict[opposingCutDict[lastHitNote.d]];
                 }
-
                 // End angle should be the same as the start angle
                 emptySwing.endPositioning.angle = emptySwing.startPositioning.angle;
 
@@ -371,6 +360,18 @@ public class SliceMap
                 Vector2 endPosition = new Vector2(dir.x * 2f, dir.y * 2f);
                 emptySwing.endPositioning.x = (int)endPosition.x;
                 emptySwing.endPositioning.y = (int)endPosition.y;
+
+                // If swing after reset is a singular dot note, Then based on parity set its swing direction
+                if (swings[i + 1].notesInCut[0].d == 8 && swings[i + 2].notesInCut.Count == 1)
+                {
+                    if (emptySwing.sliceParity == Parity.Backhand)
+                    {
+                        BeatCutData postResetSwing = result[i + 2];
+                        postResetSwing.startPositioning.angle = 0;
+                        result[i + 2] = postResetSwing;
+                    }
+                }
+
                 result.Insert(i + swingsAdded, emptySwing);
                 swingsAdded++;
             }
