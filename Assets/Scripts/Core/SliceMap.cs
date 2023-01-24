@@ -261,6 +261,8 @@ public class SliceMap
                     curSwing.endPositioning.y = curSwing.notesInCut[curSwing.notesInCut.Count - 1].y;
                 }
 
+                if (curSwing.startPositioning.angle == 180) curSwing.startPositioning.angle *= -1;
+
                 // Set ending angle equal to starting angle
                 curSwing.endPositioning.angle = curSwing.startPositioning.angle;
 
@@ -321,7 +323,10 @@ public class SliceMap
                 // Flip for left hand
                 if (!_rightHand) angle *= -1;
 
-                // Clamp the angle, flip if a forehand hit, set the angle and change that in the swings list.
+                // Applies some clamping in certain situations to prevent aggressive swing orientation
+                angle = Mathf.Clamp(angle, -90, 90);
+                if (currentNote.y != prevNote.y) angle = Mathf.Clamp(angle, -45, 45);
+
                 currentSwing.startPositioning.angle = angle;
                 currentSwing.endPositioning.angle = angle;
                 swings[i] = currentSwing;
