@@ -247,6 +247,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             {
                 _leftSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
                 _leftSaber.SetTargetWristOrientation(cutData.startPositioning.angle * -1);
+                _leftSaber.SetTargetEBPM(cutData.swingEBPM);
             }
             if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
@@ -271,6 +272,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             {
                 _rightSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
                 _rightSaber.SetTargetWristOrientation(cutData.startPositioning.angle);
+                _rightSaber.SetTargetEBPM(cutData.swingEBPM);
             }
             if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
