@@ -207,7 +207,6 @@ public class SliceMap
             // Work out Parity
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[notesInSwing.Count - 1].b);
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, notesInSwing[0], bombsBetweenSwings, _playerXOffset, _rightHand);
-            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) sData = FixDotOrientation(lastSwing, sData);
 
             // If backhand, readjust start and end angle
             if (sData.sliceParity == Parity.Backhand) {
@@ -215,6 +214,9 @@ public class SliceMap
                 sData.endPositioning.angle = BackhandDict[notesInSwing[notesInSwing.Count - 1].d];
                 sData = DotChecks(sData, result[result.Count - 1]);
             }
+
+            // If dot, re-orientate
+            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) sData = FixDotOrientation(lastSwing, sData);
 
             if (sData.sliceParity == lastSwing.sliceParity) { sData.isReset = true; }
 
@@ -269,7 +271,7 @@ public class SliceMap
                 }
 
                 // Can possibly remove? Fixes weird backhand down stack hits for the right hand? Not sure why
-                if (curSwing.startPositioning.angle == 180) curSwing.startPositioning.angle *= -1;
+                if (curSwing.startPositioning.angle == 180 && _rightHand) curSwing.startPositioning.angle *= -1;
 
                 // Set ending angle equal to starting angle
                 curSwing.endPositioning.angle = curSwing.startPositioning.angle;
@@ -296,17 +298,27 @@ public class SliceMap
             currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
                 AngleGivenCutDirection(opposingCutDict[prevNote.d], Parity.Forehand) :
                 AngleGivenCutDirection(opposingCutDict[prevNote.d], Parity.Backhand) ;
+
+            // If non-upside down hit for this dot
+            if(!(previousSwing.startPositioning.angle == 180 && !_rightHand) && !(previousSwing.startPositioning.angle == -180 && _rightHand))
+            {
+                // DO SOMETHING HERE FOR THESE FUCKING NOTES
+            }
             currentSwing.endPositioning.angle = currentSwing.startPositioning.angle;
         } else {
             // If the notes are on the same layer, generate the angle based on the end and starting hand positions
             Vector2 lastHandCoords = new Vector2(previousSwing.endPositioning.x, previousSwing.endPositioning.y);
             Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
             float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
+            
+            // Correct the angle for backhand hits
+            if (currentSwing.sliceParity == Parity.Backhand) {
+                if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
+            }
 
-            // Right hand directional correction
-            if(currentSwing.sliceParity == Parity.Forehand && !_rightHand) if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
+            // Flip for left hand
+            if (!_rightHand) angle *= -1;
 
-            // Applies some clamping in certain situations to prevent aggressive swing orientation
             angle = Mathf.Clamp(angle, -90, 90);
             if (currentNote.y != prevNote.y) angle = Mathf.Clamp(angle, -45, 45);
 
@@ -391,6 +403,7 @@ public class SliceMap
         Vector3 firstNoteCoords = new Vector3(firstNote.x, firstNote.y, 0);
         Vector3 lastNoteCoords = new Vector3 (lastNote.x, lastNote.y, 0);
         float angle = Vector3.SignedAngle(Vector3.up, lastNoteCoords - firstNoteCoords, Vector3.forward);
+        if (!_rightHand) angle *= -1;
         return angle;
     }
     // Determines if a Note is inverted
