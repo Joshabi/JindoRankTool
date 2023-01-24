@@ -135,7 +135,7 @@ public class SliceMap
             // If precision falls under "Slider", or time stamp is the same, run
             // checks to figure out if it is a slider, window, stack ect..
             if (Mathf.Abs(currentNote.b - nextNote.b) <= sliderPrecision) {
-                if (nextNote.d == 8 || notesInSwing[notesInSwing.Count-1].d == 8 ||
+                if (nextNote.d == 8 || notesInSwing[^1].d == 8 ||
                     currentNote.d == nextNote.d || Mathf.Abs(ForehandDict[currentNote.d] - ForehandDict[nextNote.d]) <= 45 ||
                      Mathf.Abs(BackhandDict[currentNote.d] - BackhandDict[nextNote.d]) <= 45)
                     { continue; }
@@ -146,11 +146,11 @@ public class SliceMap
             sData.notesInCut = new List<ColourNote>(notesInSwing);
             sData.sliceParity = Parity.Forehand;
             sData.sliceStartBeat = notesInSwing[0].b;
-            sData.sliceEndBeat = notesInSwing[notesInSwing.Count - 1].b + 0.1f;
+            sData.sliceEndBeat = notesInSwing[^1].b + 0.1f;
             sData.startPositioning.angle = ForehandDict[notesInSwing[0].d];
             sData.startPositioning.x = notesInSwing[0].x;
             sData.startPositioning.y = notesInSwing[0].y;
-            sData.endPositioning.angle = ForehandDict[notesInSwing[notesInSwing.Count-1].d];
+            sData.endPositioning.angle = ForehandDict[notesInSwing[^1].d];
             sData.endPositioning.x = notesInSwing[notesInSwing.Count-1].x;
             sData.endPositioning.y = notesInSwing[notesInSwing.Count-1].y;
 
@@ -159,7 +159,7 @@ public class SliceMap
                 if (currentNote.d == 0 || currentNote.d == 4 || currentNote.d == 5) {
                     sData.sliceParity = Parity.Backhand;
                     sData.startPositioning.angle = BackhandDict[notesInSwing[0].d];
-                    sData.endPositioning.angle = BackhandDict[notesInSwing[notesInSwing.Count - 1].d]; 
+                    sData.endPositioning.angle = BackhandDict[notesInSwing[^1].d]; 
                 }
                 result.Add(sData);
                 notesInSwing.Clear();
@@ -167,8 +167,8 @@ public class SliceMap
             }
 
             // If previous swing exists
-            BeatCutData lastSwing = result[result.Count - 1];
-            ColourNote lastNote = lastSwing.notesInCut[lastSwing.notesInCut.Count - 1];
+            BeatCutData lastSwing = result[^1];
+            ColourNote lastNote = lastSwing.notesInCut[^1];
 
             // Performs Dot Checks under the assumption is a forehand swing
             sData = DotChecks(sData, lastSwing);
@@ -194,7 +194,7 @@ public class SliceMap
             }
 
             // Work out current player XOffset for bomb calculations
-            List<Obstacle> wallsInBetween = walls.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[notesInSwing.Count - 1].b);
+            List<Obstacle> wallsInBetween = walls.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
             if(wallsInBetween.Count != 0) {
                 foreach(Obstacle wall in wallsInBetween)
                 {
@@ -213,14 +213,14 @@ public class SliceMap
             if (BeatToSeconds(_BPM, notesInSwing[notesInSwing.Count-1].b - _lastWallTime) > undodgeCheckTime) { _playerXOffset = 0; }
 
             // Work out Parity
-            List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[notesInSwing.Count - 1].b);
+            List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, notesInSwing[0], bombsBetweenSwings, _playerXOffset, _rightHand);
 
             // If backhand, readjust start and end angle
             if (sData.sliceParity == Parity.Backhand) {
                 sData.startPositioning.angle = BackhandDict[notesInSwing[0].d];
-                sData.endPositioning.angle = BackhandDict[notesInSwing[notesInSwing.Count - 1].d];
-                sData = DotChecks(sData, result[result.Count - 1]);
+                sData.endPositioning.angle = BackhandDict[notesInSwing[^1].d];
+                sData = DotChecks(sData, result[^1]);
             }
 
             // If dot, re-orientate
@@ -259,27 +259,27 @@ public class SliceMap
                 // Depending on which is closer, calculate angle
                 Vector2 lastSwingVec = LevelUtils.GetWorldXYFromBeatmapCoords(lastSwing.notesInCut[0].x, lastSwing.notesInCut[0].y);
                 Vector2 firstNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[0].x, currentSwing.notesInCut[0].y);
-                Vector2 lastNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[currentSwing.notesInCut.Count-1].x, currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].y);
+                Vector2 lastNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[^1].x, currentSwing.notesInCut[^1].y);
 
                 float distanceToStart = Vector2.Distance(firstNoteVec, lastSwingVec);
                 float distanceToEnd = Vector2.Distance(lastNoteVec, lastSwingVec);
 
                 // Depending on Parity, calculate the cut direction of the dot stack
                 currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                    AngleBetweenNotes(currentSwing.notesInCut[currentSwing.notesInCut.Count - 1], currentSwing.notesInCut[0]) :
-                    AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[currentSwing.notesInCut.Count - 1]);
+                    AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]) :
+                    AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
 
                 if (distanceToStart > distanceToEnd) {
                     currentSwing.notesInCut.Reverse();
                     currentSwing.startPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                        AngleBetweenNotes(currentSwing.notesInCut[currentSwing.notesInCut.Count - 1], currentSwing.notesInCut[0]) :
-                        AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[currentSwing.notesInCut.Count - 1]);
+                        AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]) :
+                        AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
                     currentSwing.sliceStartBeat = currentSwing.notesInCut[0].b;
-                    currentSwing.sliceEndBeat = currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].b + 0.1f;
+                    currentSwing.sliceEndBeat = currentSwing.notesInCut[^1].b + 0.1f;
                     currentSwing.startPositioning.x = currentSwing.notesInCut[0].x;
                     currentSwing.startPositioning.y = currentSwing.notesInCut[0].y;
-                    currentSwing.endPositioning.x = currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].x;
-                    currentSwing.endPositioning.y = currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].y;
+                    currentSwing.endPositioning.x = currentSwing.notesInCut[^1].x;
+                    currentSwing.endPositioning.y = currentSwing.notesInCut[^1].y;
                 }
 
                 // Can possibly remove? Fixes weird backhand down stack hits for the right hand? Not sure why
@@ -291,10 +291,10 @@ public class SliceMap
             }
         } else if (currentSwing.notesInCut[0].d == 8 && currentSwing.notesInCut[currentSwing.notesInCut.Count-1].d != 8) {
             // In the event its a dot then an arrow
-            currentSwing.startPositioning.angle = AngleGivenCutDirection(currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].d, currentSwing.sliceParity);
+            currentSwing.startPositioning.angle = AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity);
             currentSwing.endPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                ForehandDict[currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].d] :
-                BackhandDict[currentSwing.notesInCut[currentSwing.notesInCut.Count - 1].d];
+                ForehandDict[currentSwing.notesInCut[^1].d] :
+                BackhandDict[currentSwing.notesInCut[^1].d];
         }
         return currentSwing;
     }
@@ -303,7 +303,7 @@ public class SliceMap
     private BeatCutData FixDotOrientation(BeatCutData lastSwing, BeatCutData currentSwing)
     {
         // Get the previous and current notes
-        ColourNote lastNote = lastSwing.notesInCut[lastSwing.notesInCut.Count - 1];
+        ColourNote lastNote = lastSwing.notesInCut[^1];
         ColourNote currentNote = currentSwing.notesInCut[0];
 
         if (lastNote.d != 8) {
@@ -347,7 +347,7 @@ public class SliceMap
             if (swings[i].isReset)
             {
                 // Reference to last swing
-                ColourNote lastNote = swings[i - 1].notesInCut[swings[i - 1].notesInCut.Count - 1];
+                ColourNote lastNote = swings[i - 1].notesInCut[^1];
 
                 // Create a new swing with inverse parity to the last.
                 BeatCutData emptySwing = new BeatCutData();
