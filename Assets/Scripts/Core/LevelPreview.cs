@@ -59,6 +59,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     private bool _isPreviewing = false;
     private float _timeToReachSabers;
     private float _beatTimeToReachSabers;
+    private float _BPM;
 
     private void Awake()
     {
@@ -72,9 +73,13 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _leftSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
         _leftSaber.transform.position = Vector3.zero;
         _leftSaber.SetSaberColour(GetLeftColour());
+        _leftSaber.SetRestingWristPosition(1, 1);
+        _leftSaber.SetRestingWristOrientation(0.0f);
         _rightSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
         _rightSaber.SetSaberColour(GetRightColour());
         _rightSaber.transform.position = Vector3.zero;
+        _rightSaber.SetRestingWristPosition(2, 1);
+        _rightSaber.SetRestingWristOrientation(0.0f);
         _leftSaber.SetSaberZ(_saberZ);
         _rightSaber.SetSaberZ(_saberZ);
     }
@@ -116,6 +121,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     {
         if (beatmapData.Metadata._difficultyRank == _desiredDifficulty)
         {
+            _BPM = beatmapData.Metadata.bpm;
             _beatmap = beatmapData;
             _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
             _levelAudioLoader.LoadSong(_currentMapDirectory + "/" + beatmapData.Metadata.songFilename, OnLevelAudioLoaded);
@@ -136,8 +142,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _bombIndex = 0;
 
         _beatmap = inBeatmapData;
-        _beatsPerSecond = _beatmap.Metadata.bpm / 60.0f;
-        _beatTimeToReachSabers = _timeToReachSabers * _beatsPerSecond;
+        _beatTimeToReachSabers = TimeUtils.SecondsToBeats(_BPM, _timeToReachSabers);
 
         if (_audioSource != null)
         {
@@ -175,8 +180,8 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         }
         _obstacles.Sort((x, y) => x.b.CompareTo(y.b));
 
-        _sliceMapRight = new SliceMap(_beatmap.Metadata.bpm, _blocks, _bombs, _obstacles, true);
-        _sliceMapLeft = new SliceMap(_beatmap.Metadata.bpm, _blocks, _bombs, _obstacles, false);
+        _sliceMapRight = new SliceMap(_BPM, _blocks, _bombs, _obstacles, true);
+        _sliceMapLeft = new SliceMap(_BPM, _blocks, _bombs, _obstacles, false);
         _leftSliceIndex = 0;
         _rightSliceIndex = 0;
 
@@ -208,7 +213,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _pendingRemoval.Clear();
 
         _songTime += Time.deltaTime;
-        _beatTime = _songTime * _beatsPerSecond;
+        _beatTime = TimeUtils.SecondsToBeats(_BPM, _songTime);
         _timingDataText.text = _songTime.ToString("F2")+"s (beat: "+_beatTime.ToString("F1")+")";
 
         if (_blockIndex < _blocks.Count)
@@ -250,6 +255,12 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             if (_beatTime > cutData.sliceEndBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
                 ++_leftSliceIndex;
+                if (_leftSliceIndex < _sliceMapLeft.GetSliceCount())
+                {
+                    BeatCutData nextCutData = _sliceMapLeft.GetBeatCutData(_leftSliceIndex);
+                    float timeTilNextBeat = TimeUtils.BeatsToSeconds(_BPM, nextCutData.sliceStartBeat - cutData.sliceEndBeat);
+                    _leftSaber.SetTimeToNextBeat(timeTilNextBeat);
+                }
             }
             UpdateSaberCutText(_leftSaberDataText, cutData);
         }
@@ -268,6 +279,12 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             if (_beatTime > cutData.sliceEndBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
                 ++_rightSliceIndex;
+                if (_rightSliceIndex < _sliceMapRight.GetSliceCount())
+                {
+                    BeatCutData nextCutData = _sliceMapRight.GetBeatCutData(_rightSliceIndex);
+                    float timeTilNextBeat = TimeUtils.BeatsToSeconds(_BPM, nextCutData.sliceStartBeat - cutData.sliceEndBeat);
+                    _rightSaber.SetTimeToNextBeat(timeTilNextBeat);
+                }
             }
             UpdateSaberCutText(_rightSaberDataText, cutData);
         }

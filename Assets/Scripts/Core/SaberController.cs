@@ -12,18 +12,29 @@ public class SaberController : MonoBehaviour
     private float _wristOrientation;
     private float _palmOrientation;
     private Vector2 _wristPosition;
+    private float _restingWristOrientation;
     private float _targetWristOrientation;
     private float _targetPalmOrientation;
+    private Vector2 _restingWristPosition;
     private Vector2 _targetWristPosition;
     private float _saberZ;
     private Color _saberColour;
-    private float _wristOrientSpeed = 45.0f;
-    private float _palmOrientSpeed = 30.0f;
-    private float _wristPositSpeed = 45.0f;
+    private float _maxWristOrientDrag = 120.0f;
+    private float _maxPalmOrientDrag = 50.0f;
+    private float _maxWristPositDrag = 120.0f;
+    private float _minWristOrientDrag = 30.0f;
+    private float _minPalmOrientDrag = 24.0f;
+    private float _minWristPositDrag = 30.0f;
+    private float _wristOrientDrag;
+    private float _palmOrientDrag;
+    private float _wristPositDrag;
     
     // Start is called before the first frame update
     void Awake()
     {
+        _wristOrientDrag = _maxWristOrientDrag;
+        _palmOrientDrag = _maxPalmOrientDrag;
+        _wristPositDrag = _maxWristPositDrag;
         _wrist = new GameObject("wrist");
         _wrist.transform.parent = transform;
         _palm = new GameObject("palm");
@@ -31,17 +42,17 @@ public class SaberController : MonoBehaviour
         _saber = GameObject.Instantiate<SaberObject>(SaberPrefab);
         _saber.transform.parent = _palm.transform;
         _saber.SetColour(_saberColour);
-        _wristOrientSpeed /= Time.timeScale;
-        _palmOrientSpeed /= Time.timeScale;
-        _wristPositSpeed /= Time.timeScale;
+        _wristOrientDrag /= Time.timeScale;
+        _palmOrientDrag /= Time.timeScale;
+        _wristPositDrag /= Time.timeScale;
     }
 
     // Update is called once per frame
     void Update()
     {
-        _wristOrientation -= (_wristOrientation - _targetWristOrientation) / _wristOrientSpeed;
-        _palmOrientation -= (_palmOrientation - _targetPalmOrientation) / _palmOrientSpeed;
-        _wristPosition -= (_wristPosition - _targetWristPosition) / _wristPositSpeed;
+        _wristOrientation -= (_wristOrientation - _targetWristOrientation) / _wristOrientDrag;
+        _palmOrientation -= (_palmOrientation - _targetPalmOrientation) / _palmOrientDrag;
+        _wristPosition -= (_wristPosition - _targetWristPosition) / _wristPositDrag;
         Vector3 pos = _wrist.transform.position;
         pos.x = _wristPosition.x;
         pos.y = _wristPosition.y;
@@ -70,6 +81,17 @@ public class SaberController : MonoBehaviour
         _targetWristPosition = LevelUtils.GetWorldXYFromBeatmapCoords(x, y);
     }
 
+    public void SetRestingWristPosition(int x, int y)
+    {
+        _restingWristPosition.x = x;
+        _restingWristPosition.y = y;
+    }
+
+    public void SetRestingWristOrientation(float a)
+    {
+        _restingWristOrientation = a;
+    }
+
     public void SetSaberColour(Color c)
     {
         if (_saber != null)
@@ -85,6 +107,27 @@ public class SaberController : MonoBehaviour
     public void SetSaberZ(float inZ)
     {
         _saberZ = inZ;
+    }
+
+    public void SetTimeToNextBeat(float t)
+    {
+        if (t < 0.2f)
+        {
+            _wristOrientDrag = _minWristOrientDrag;
+            _palmOrientDrag = _minPalmOrientDrag;
+            _wristPositDrag = _minWristPositDrag;
+        }
+        else
+        {
+            SetTargetWristPosition((int)_restingWristPosition.x, (int)_restingWristPosition.y);
+            SetTargetWristOrientation(_restingWristOrientation);
+
+            float u = Mathf.Clamp((t - 0.2f), 0.0f, 1.0f);
+
+            _wristOrientDrag = Mathf.Lerp(_minWristOrientDrag, _maxWristOrientDrag, u) / Time.timeScale;
+            _palmOrientDrag = Mathf.Lerp(_minPalmOrientDrag, _maxPalmOrientDrag, u) / Time.timeScale;
+            _wristPositDrag = Mathf.Lerp(_minWristPositDrag, _maxWristPositDrag, u) / Time.timeScale;
+        }
     }
 
 }
