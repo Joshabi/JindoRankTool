@@ -13,8 +13,11 @@ public interface IRuntimeLevelContext
     void DestroyBlock(GameObject go);
 }
 
+[RequireComponent(typeof(LevelAudioLoader))]
 public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 {
+    [SerializeField] private LevelAudioLoader _levelAudioLoader;
+
     [SerializeField] private AudioSource _audioSource;
     [SerializeField] private BeatmapData _beatmap;
     [SerializeField] private BeatCubeObject _cubePrefab;
@@ -24,10 +27,14 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     [SerializeField] private Color _leftColour;
     [SerializeField] private Color _rightColour;
     [SerializeField] private float _saberZ = -30.0f;
+    [SerializeField] private Text _mapNameText;
     [SerializeField] private Text _timingDataText;
     [SerializeField] private Text _leftSaberDataText;
     [SerializeField] private Text _rightSaberDataText;
     [SerializeField] private float _startTime = 0.0f;
+
+    private BeatmapDifficultyRank _desiredDifficulty;
+    private string _currentMapDirectory;
 
     private float _songTime = 0.0f;
     private float _beatTime = 0.0f;
@@ -53,6 +60,25 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     private float _timeToReachSabers;
     private float _beatTimeToReachSabers;
 
+    private void Awake()
+    {
+        _levelAudioLoader = GetComponent<LevelAudioLoader>();
+
+        _pendingRemoval = new List<GameObject>();
+        _timeToReachSabers = Mathf.Abs((Mathf.Abs(_saberZ)-2.0f) / _speed);
+        _blocks = new List<ColourNote>();
+        _bombs = new List<BombNote>();
+        _goInstances = new List<GameObject>();
+        _leftSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
+        _leftSaber.transform.position = Vector3.zero;
+        _leftSaber.SetSaberColour(GetLeftColour());
+        _rightSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
+        _rightSaber.SetSaberColour(GetRightColour());
+        _rightSaber.transform.position = Vector3.zero;
+        _leftSaber.SetSaberZ(_saberZ);
+        _rightSaber.SetSaberZ(_saberZ);
+    }
+
     public Color GetLeftColour()
     {
         return _leftColour;
@@ -73,27 +99,34 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _pendingRemoval.Add(go);
     }
 
-    private void Awake()
-    {
-        _pendingRemoval = new List<GameObject>();
-        _timeToReachSabers = Mathf.Abs((Mathf.Abs(_saberZ)-2.0f) / _speed);
-        _blocks = new List<ColourNote>();
-        _bombs = new List<BombNote>();
-        _goInstances = new List<GameObject>();
-        _leftSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
-        _leftSaber.transform.position = Vector3.zero;
-        _leftSaber.SetSaberColour(GetLeftColour());
-        _rightSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
-        _rightSaber.SetSaberColour(GetRightColour());
-        _rightSaber.transform.position = Vector3.zero;
-        _leftSaber.SetSaberZ(_saberZ);
-        _rightSaber.SetSaberZ(_saberZ);
-    }
-
     public bool IsPreviewing()
     {
         return _isPreviewing;
     }
+
+    public void PreviewMap(string mapDirectory, BeatmapDifficultyRank preferredDifficulty)
+    {
+        _desiredDifficulty = preferredDifficulty;
+        _currentMapDirectory = mapDirectory;
+        LevelLoader levelLoader = new LevelLoader();
+        levelLoader.LoadLevel(mapDirectory, OnLevelLoaded);
+    }
+
+    private void OnLevelLoaded(BeatmapData beatmapData)
+    {
+        if (beatmapData.Metadata._difficultyRank == _desiredDifficulty)
+        {
+            _beatmap = beatmapData;
+            _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
+            _levelAudioLoader.LoadSong(_currentMapDirectory + "/song.egg", OnLevelAudioLoaded);
+        }
+    }
+
+    private void OnLevelAudioLoaded(AudioClip audio)
+    {
+        SetBeatmap(audio, _beatmap);
+    }
+
 
     public void SetBeatmap(AudioClip inAudioClip, BeatmapData inBeatmapData)
     {
@@ -157,6 +190,11 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
     private void Update()
     {
+        if (!_isPreviewing)
+        {
+            return;
+        }
+
         if (_beatmap.Metadata.mapName.Length == 0)
         {
             return;

@@ -3,31 +3,20 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Networking;
-public class LevelLoader : MonoBehaviour
+public class LevelLoader
 {
 
-    public delegate void LevelLoadEvent(AudioClip levelAudio, BeatmapData beatmapData);
-    public event LevelLoadEvent OnLevelLoaded;
+    public delegate void LevelLoadEvent(BeatmapData beatmapData);
 
-    public LevelStructure _loadedLevel;
-    public List<BeatmapData> _loadedBeatmaps;
-    private BeatmapDifficultyRank _desiredDifficulty = 0;
-
-    public void LoadLevel(string levelFolder, BeatmapDifficultyRank desiredDiff)
+    public void LoadLevel(string levelFolder, LevelLoadEvent onLevelLoadCallback)
     {
-        _desiredDifficulty = desiredDiff;
         string infoDatFile = levelFolder + "/info.dat";
-
-        Debug.Log("Attempting to load " + infoDatFile);
-
         string fileJson = File.ReadAllText(infoDatFile);
-
-        Debug.Log("File: " + fileJson);
 
         if (fileJson.Length > 0)
         {
-            _loadedLevel = JsonUtility.FromJson<LevelStructure>(fileJson);
-            LevelDifficultyStructure[] diffs = _loadedLevel._difficultyBeatmapSets;
+            LevelStructure loadedLevel = JsonUtility.FromJson<LevelStructure>(fileJson);
+            LevelDifficultyStructure[] diffs = loadedLevel._difficultyBeatmapSets;
             foreach (LevelDifficultyStructure diff in diffs)
             {
                 if (!diff._beatmapCharacteristicName.ToLower().Equals("lightshow") && !diff._beatmapCharacteristicName.ToLower().Equals("360degree") && !diff._beatmapCharacteristicName.ToLower().Equals("90degree"))
@@ -54,56 +43,13 @@ public class LevelLoader : MonoBehaviour
                         beatmap.Metadata.mapName = _loadedLevel._songName;
                         beatmap.BeatData = beatDataV3;
 
-                        _loadedBeatmaps.Add(beatmap);
+                        if (onLevelLoadCallback != null)
+                        {
+                            onLevelLoadCallback(beatmap);
+                        }
                     }
                 }
             }
-
-            string songFilePath = "file:///" + levelFolder + "/" + _loadedLevel._songFilename;
-            StartCoroutine(GetAudioFile(songFilePath));
         }
     }
-
-    IEnumerator GetAudioFile(string filePath)
-    {
-        using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(filePath, AudioType.OGGVORBIS))
-        {
-            yield return www.SendWebRequest();
-
-            if (www.isNetworkError || www.isHttpError)
-            {
-                Debug.LogError(www.error);
-            }
-            else
-            {
-                OnAudioLoaded(DownloadHandlerAudioClip.GetContent(www));
-            }
-        }
-    }
-
-    void OnAudioLoaded(AudioClip audio)
-    {
-        if (OnLevelLoaded != null)
-        {
-            bool levelFound = false;
-            foreach (BeatmapData beatmap in _loadedBeatmaps)
-            {
-                if (beatmap.Metadata._difficultyRank == _desiredDifficulty)
-                {
-                    OnLevelLoaded(audio, beatmap);
-                    levelFound = true;
-                    break;
-                }
-            }
-            if (!levelFound && _loadedBeatmaps.Count > 0)
-            {
-                OnLevelLoaded(audio, _loadedBeatmaps[0]);
-            }
-        }
-        else
-        {
-            Debug.LogError("Nothing to broadcast to.");
-        }
-    }
-
 }

@@ -3,53 +3,68 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+[RequireComponent(typeof(LevelDownloader))]
+[RequireComponent(typeof(LevelPreview))]
 public class JindoRankTool : MonoBehaviour
 {
 
     [SerializeField] private string _customLevelPath;
     [SerializeField] private BeatmapDifficultyRank _desiredDifficulty;
-    [SerializeField] private LevelLoader _levelLoader;
-    [SerializeField] private LevelPreview _levelPreview;
-    [SerializeField] private Text _mapNameTextField;
+    [SerializeField] private bool _previewMap = true;
+    [SerializeField] private string _beatSaberMapIDCSV;
+
     [SerializeField] private float _timeScale = 1.0f;
 
+    private LevelPreview _levelPreview;
+    private LevelLoader _levelLoader;
+    private LevelDownloader _levelDownloader;
     private LevelSliceMapOutputter _sliceMapOutputter;
     private System.Guid _doublesAnalyserID;
 
     private void Awake()
     {
         Time.timeScale = _timeScale;
-        if (_levelLoader != null)
-        {
-            _sliceMapOutputter = new LevelSliceMapOutputter(_levelLoader);
-            _doublesAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapDoublesAnalyser());
 
-            _levelLoader.OnLevelLoaded += _levelLoader_OnLevelLoaded;
-            _levelLoader.LoadLevel(_customLevelPath, _desiredDifficulty);
+        _sliceMapOutputter = new LevelSliceMapOutputter();
+        _doublesAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapDoublesAnalyser());
+
+        if (_previewMap)
+        {
+            _levelPreview = GetComponent<LevelPreview>();
+            _levelPreview.PreviewMap(_customLevelPath, _desiredDifficulty);
+            _levelLoader = new LevelLoader();
+            _levelLoader.LoadLevel(_customLevelPath, _levelLoader_OnLevelLoaded);
+        }
+
+        if (_beatSaberMapIDCSV.Length > 0)
+        {
+            _levelDownloader = GetComponent<LevelDownloader>();
+            _levelDownloader.OnLevelDownloadsCompleted += OnLevelDownloadsComplete;
+            _levelDownloader.DownloadLevels(_beatSaberMapIDCSV);
+        }
+        else
+        {
+            OnLevelDownloadsComplete();
+        }
+    }
+
+    private void OnLevelDownloadsComplete()
+    {
+        _levelLoader = new LevelLoader();
+        string[] levelPaths = System.IO.Directory.GetDirectories(PathUtils.GetImportDirectory());
+        foreach (string levelPath in levelPaths)
+        {
+            _levelLoader.LoadLevel(levelPath, _levelLoader_OnLevelLoaded);
         }
     }
 
     private void OnDestroy()
     {
-        if (_sliceMapOutputter != null)
-        {
-            _sliceMapOutputter.UnregisterAnalyser(_doublesAnalyserID);
-        }
+        _sliceMapOutputter.UnregisterAnalyser(_doublesAnalyserID);
     }
 
-    private void _levelLoader_OnLevelLoaded(AudioClip levelAudio, BeatmapData beatmapData)
+    private void _levelLoader_OnLevelLoaded(BeatmapData beatmapData)
     {
-        if (_levelPreview != null)
-        {
-            //if (!_levelPreview.IsPreviewing())
-            //{
-            _mapNameTextField.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
-                _levelPreview.SetBeatmap(levelAudio, beatmapData);
-            //}
-        }
-        else
-        {
-            Debug.LogError("Null level preview");
-        }
+        _sliceMapOutputter.ProcessBeatmap(beatmapData);
     }
 }
