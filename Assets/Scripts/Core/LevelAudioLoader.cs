@@ -8,8 +8,6 @@ public class LevelAudioLoader : MonoBehaviour
 
     public delegate void LevelAudioLoadEvent(AudioClip audioClip);
 
-    public event LevelAudioLoadEvent OnLevelAudioLoaded;
-
     public void LoadSong(string filePath, LevelAudioLoadEvent onLevelAudioLoadedCallback)
     {
         StartCoroutine(GetAudioFile(filePath, onLevelAudioLoadedCallback));
