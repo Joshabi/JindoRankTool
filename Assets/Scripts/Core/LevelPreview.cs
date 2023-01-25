@@ -67,7 +67,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _levelAudioLoader = GetComponent<LevelAudioLoader>();
 
         _pendingRemoval = new List<GameObject>();
-        _timeToReachSabers = Mathf.Abs((Mathf.Abs(_saberZ)-2.0f) / _speed);
+        _timeToReachSabers = Mathf.Abs((Mathf.Abs(_saberZ)-3.0f) / _speed);
         _blocks = new List<ColourNote>();
         _bombs = new List<BombNote>();
         _goInstances = new List<GameObject>();
@@ -216,7 +216,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         }
         _pendingRemoval.Clear();
 
-        _songTime += Time.deltaTime;
+        _songTime = _audioSource.time;
         _beatTime = TimeUtils.SecondsToBeats(_BPM, _songTime);
         _timingDataText.text = _songTime.ToString("F2")+"s (beat: "+_beatTime.ToString("F1")+")";
 
