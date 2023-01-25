@@ -6,13 +6,16 @@ public class ResetParityCheck : IParityMethod
     public bool UpsideDown { get { return _upsideDown; } }
     private bool _upsideDown;
 
-    public Parity ParityCheck(BeatCutData lastCut, ColourNote nextNote, List<BombNote> bombs, float playerXOffset, bool rightHand)
+    public Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, float playerXOffset, bool rightHand)
     {
         // AFN: Angle from neutral
         // Assuming a forehand down hit is neutral, and a backhand up hit
         // Rotating the hand inwards goes positive, and outwards negative
         // Using a list of definitions, turn cut direction into an angle, and check
         // if said angle makes sense.
+
+        ColourNote nextNote = currentSwing.notesInCut[0];
+
         var angleChange = (lastCut.sliceParity != Parity.Forehand) ?
             SliceMap.BackhandDict[lastCut.notesInCut[0].d] - SliceMap.ForehandDict[nextNote.d] :
             SliceMap.ForehandDict[lastCut.notesInCut[0].d] - SliceMap.BackhandDict[nextNote.d];
@@ -30,6 +33,7 @@ public class ResetParityCheck : IParityMethod
             List<int> resetDirectionList = (lastCut.sliceParity == Parity.Forehand) ? SliceMap.forehandResetDict : SliceMap.backhandResetDict;
             if (resetDirectionList.Contains(lastCut.notesInCut[0].d))
             {
+                currentSwing.resetType = ResetType.Bomb;
                 return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
             }
         }
@@ -44,6 +48,7 @@ public class ResetParityCheck : IParityMethod
         // If the angle change exceeds 180 then triangle
         if (Mathf.Abs(angleChange) > 90)
         {
+            currentSwing.resetType = ResetType.Normal;
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }
         else { return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand; }

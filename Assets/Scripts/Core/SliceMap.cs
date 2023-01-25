@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 [System.Serializable]
@@ -75,7 +76,7 @@ public class SliceMap
     { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
 
     public static readonly List<int> forehandResetDict = new List<int>()
-    { 1, 2, 3, 6, 7 };
+    { 1, 6, 7 };
     public static readonly List<int> backhandResetDict = new List<int>()
     { 0, 4, 5 };
 
@@ -228,7 +229,7 @@ public class SliceMap
 
             // Work out Parity
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
-            sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, notesInSwing[0], bombsBetweenSwings, _playerXOffset, _rightHand);
+            sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, ref sData, bombsBetweenSwings, _playerXOffset, _rightHand);
 
             // If backhand, readjust start and end angle
             if (sData.sliceParity == Parity.Backhand) {
@@ -240,7 +241,8 @@ public class SliceMap
             // If dot, re-orientate
             if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) sData = FixDotOrientation(lastSwing, sData);
 
-            // If parity is the same as before, this is a reset.
+            // If parity is the same as before and not flagged as a bomb reset.
+            // LATER: Add logic to determine if adding a swing or rolling is the better option.
             if (sData.sliceParity == lastSwing.sliceParity && sData.resetType != ResetType.Bomb) { sData.resetType = ResetType.Normal; }
 
             // If current parity method thinks we are upside down, flip values.
@@ -359,7 +361,8 @@ public class SliceMap
 
         for (int i = 0; i < swings.Count - 1; i++)
         {
-            if (swings[i].resetType == ResetType.Bomb)
+            // Later on, different reset types will have different behaviours
+            if (swings[i].resetType == ResetType.Bomb || swings[i].resetType == ResetType.Normal)
             {
                 // Reference to last swing
                 ColourNote lastNote = swings[i - 1].notesInCut[^1];
@@ -367,12 +370,12 @@ public class SliceMap
                 // Create a new swing with inverse parity to the last.
                 BeatCutData emptySwing = new BeatCutData();
                 emptySwing.sliceParity = (swings[i].sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
-                emptySwing.sliceStartBeat = swings[i - 1].sliceEndBeat + SecondsToBeats(_BPM, 0.1f);
-                emptySwing.sliceEndBeat = emptySwing.sliceStartBeat + 0.2f;
+                emptySwing.sliceStartBeat = swings[i - 1].sliceEndBeat + SecondsToBeats(_BPM, 0.15f);
+                emptySwing.sliceEndBeat = emptySwing.sliceStartBeat + 0.5f;
                 emptySwing.SetStartPosition(lastNote.x, lastNote.y);
 
                 // If the last hit was a dot, pick the opposing direction based on parity.
-                float angle = 0;
+                float angle;
                 if (lastNote.d == 8) {
                     angle = (emptySwing.sliceParity == Parity.Forehand) ?
                         ForehandDict[1] : BackhandDict[0];
@@ -402,13 +405,14 @@ public class SliceMap
                         result[i + 2] = postResetSwing;
                     }
                 }
-
                 result.Insert(i + swingsAdded, emptySwing);
                 swingsAdded++;
             }
         }
         return result;
     }
+
+
     #endregion
 
     #region Helper Functions
