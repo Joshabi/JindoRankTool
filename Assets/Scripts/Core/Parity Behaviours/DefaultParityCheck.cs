@@ -40,65 +40,52 @@ public class DefaultParityCheck : IParityMethod
         float currentAFN = (lastCut.sliceParity != Parity.Forehand) ?
             SliceMap.BackhandDict[lastCut.notesInCut[0].d] :
             SliceMap.ForehandDict[lastCut.notesInCut[0].d];
+        float nextAFN = (lastCut.sliceParity != Parity.Forehand) ?
+            SliceMap.BackhandDict[nextNote.d] :
+            SliceMap.ForehandDict[nextNote.d];
 
-        angleChange = (lastCut.sliceParity != Parity.Forehand) ?
-            SliceMap.BackhandDict[lastCut.notesInCut[0].d] - SliceMap.ForehandDict[nextNote.d] :
-            SliceMap.ForehandDict[lastCut.notesInCut[0].d] - SliceMap.BackhandDict[nextNote.d];
-
+        angleChange = currentAFN - nextAFN;
         _upsideDown = false;
 
         #region Bomb Reset Checks
 
-        // If last swing was entirely dots
-        if(lastCut.notesInCut.Count(x => x.d == 8) == lastCut.notesInCut.Count)
+        // Structured so that successive bombs (for example, in a spiral) can be accounted for to some degree.
+        // Alternates the orientation each time so if bombs appear in the opposite spots, it flips
+        bool bombReset = false;
+        for (int i = 0; i < bombs.Count; i++)
         {
-            // Checks if either bomb reset bomb locations exist
-            var bombCheckLayer = (lastCut.sliceParity == Parity.Forehand) ? 0 : 2;
-            bool containsRightmost = bombs.FindIndex(x => x.x == 2 + playerXOffset && x.y == bombCheckLayer) != -1;
-            bool containsLeftmost = bombs.FindIndex(x => x.x == 1 + playerXOffset && x.y == bombCheckLayer) != -1;
+            // Get current bomb
+            BombNote bomb = bombs[i];
+            ColourNote note;
 
-            // If there is a bomb, potentially a bomb reset
-            if ((!rightHand && containsLeftmost) || (rightHand && containsRightmost))
+            // Get the last note. In the case of a stack, picks the note that isnt at 2 or 0 as
+            // it triggers a reset when it shouldn't.
+            note = lastCut.notesInCut[^1];
+            if(lastCut.notesInCut.Count > 1)
             {
-                // Set the angle tolerance
-                float angleTolerance = 90;
-                if (lastCut.sliceParity == Parity.Backhand) { angleTolerance = 45; }
-
-                // If the swing falls under the angle tolerance, we predict its a bomb reset
-                // This catches bomb reset detection involving dot notes.
-                if (Mathf.Abs(lastCut.endPositioning.angle) <= angleTolerance)
-                {
-                    if ((lastCut.sliceParity == Parity.Forehand && nextNote.y > 0 && nextNote.d == 8)
-                        || (lastCut.sliceParity == Parity.Backhand && nextNote.y < 2 && nextNote.d == 8))
-                    {
-                        // If a dot note thats above or below the interactive bombs, and its dots, just swing
-                        // around the bombs
-                        return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
-                    }
-                    else
-                    {
-                        currentSwing.resetType = ResetType.Bomb;
-                        return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
-                    }
+                if (lastCut.endPositioning.angle == 0 && lastCut.sliceParity == Parity.Forehand) {
+                    note = lastCut.notesInCut.First(x => x.y != 0);
+                } else if(lastCut.endPositioning.angle == 0 && lastCut.sliceParity == Parity.Backhand) {
+                    note = lastCut.notesInCut.First(x => x.y != 2);
                 }
             }
-        } else
-        {
-            // Structured so that successive bombs (for example, in a spiral) can be accounted for to some degree.
-            // Alternates the orientation each time so if bombs appear in the opposite spots, it flips
-            bool bombForcedReset = false;
-            for (int i = 0; i < bombs.Count; i++)
-            {
-                // Get bomb and next notes orientation
-                BombNote bomb = bombs[i];
-                ColourNote note = lastCut.notesInCut.Last(x => x.d != 8);
-                int orientation = note.d;
-                Vector2 assumedHandCoords = new Vector2(note.x, note.y);
-                bombForcedReset = _bombDetectionConditions[orientation](note, bomb.x, bomb.y);
-                if (bombForcedReset) break;
-            }
 
-            if(bombForcedReset && ((currentAFN! <= 0 && !rightHand) || (currentAFN !>= 0 && rightHand))) {
+            // Get the last notes cut direction based on the last swings angle
+            var lastNoteCutDir = (lastCut.sliceParity == Parity.Forehand) ?
+                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
+                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
+
+            // Use the dictionary to determine if a reset should be called given bomb position and note position
+            bombReset = _bombDetectionConditions[lastNoteCutDir](note, bomb.x, bomb.y);
+            if (bombReset) break;
+        }
+
+        if (bombReset)
+        {
+            // TEMP: This IF statement seemed to help catch dot spirals for now, but probably causes issues somewhere
+            if ((rightHand && nextAFN > -180) || (!rightHand && nextAFN < 180))
+            {
+                // Set as bomb reset and return same parity as last swing
                 currentSwing.resetType = ResetType.Bomb;
                 return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
             }

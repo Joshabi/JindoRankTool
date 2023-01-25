@@ -266,11 +266,12 @@ public class SliceMap
     // Modifies a Swing if Dot Notes are involved
     public BeatCutData DotChecks(BeatCutData currentSwing, BeatCutData lastSwing)
     {
-        // If the start and end notes are dots
-        if(currentSwing.notesInCut[0].d == 8 && currentSwing.notesInCut[^1].d == 8)
+        // If the entire swing is dots
+        if(currentSwing.notesInCut.Count(x => x.d == 8) == currentSwing.notesInCut.Count)
         {
             // If there is more then 1 note, indicating a dot stack, tower, or zebra slider
-            if (currentSwing.notesInCut.Count > 1) {
+            if (currentSwing.notesInCut.Count > 1)
+            {
                 // Check which note is closer from last swing
                 // Depending on which is closer, calculate angle
                 Vector2 lastSwingVec = LevelUtils.GetWorldXYFromBeatmapCoords(lastSwing.notesInCut[0].x, lastSwing.notesInCut[0].y);
@@ -286,7 +287,8 @@ public class SliceMap
                     AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
                 currentSwing.SetStartAngle(angle);
 
-                if (distanceToStart > distanceToEnd) {
+                if (distanceToStart > distanceToEnd)
+                {
                     currentSwing.notesInCut.Reverse();
                     angle = (currentSwing.sliceParity == Parity.Forehand) ?
                         AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]) :
@@ -394,18 +396,6 @@ public class SliceMap
                 Vector3 dir = Quaternion.Euler(0, 0, emptySwing.startPositioning.angle) * Vector3.up;
                 Vector2 endPosition = new Vector2(dir.x * 2f, dir.y * 2f);
                 emptySwing.SetEndPosition((int)endPosition.x, (int)endPosition.y);
-
-                // If swing after reset is a singular dot note, Then based on parity set its swing direction
-                if (swings[i+swingsAdded].notesInCut[0].d == 8 && swings[i + swingsAdded].notesInCut.Count == 1)
-                {
-                    if (emptySwing.sliceParity == Parity.Backhand)
-                    {
-                        BeatCutData postResetSwing = result[i + swingsAdded];
-                        postResetSwing.SetStartAngle(0);
-                        postResetSwing.SetEndAngle(0);
-                        result[i + swingsAdded] = postResetSwing;
-                    }
-                }
 
                 result.Insert(i + swingsAdded, emptySwing);
                 swingsAdded++;

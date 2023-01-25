@@ -544,10 +544,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 028a8d0594ba28441ad266b4c6fc580b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _customLevelPath: "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Beat Saber\\Beat
-    Saber_Data\\CustomLevels\\2a2ef (M\xF6bius - Timbo, abcbadq, Narwhal)"
+  _customLevelPath: Enter a map filepath here
   _desiredDifficulty: 9
-  _previewMap: 1
+  _previewMap: 0
   _beatSaberMapIDCSV: 
   _timeScale: 1
 --- !u!4 &453708160
