@@ -76,7 +76,7 @@ public class SliceMap
     { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
 
     public static readonly List<int> forehandResetDict = new List<int>()
-    { 1, 6, 7 };
+    { 1, 2, 3, 6, 7 };
     public static readonly List<int> backhandResetDict = new List<int>()
     { 0, 4, 5 };
 
@@ -396,13 +396,14 @@ public class SliceMap
                 emptySwing.SetEndPosition((int)endPosition.x, (int)endPosition.y);
 
                 // If swing after reset is a singular dot note, Then based on parity set its swing direction
-                if (swings[i + 1].notesInCut[0].d == 8 && swings[i + 2].notesInCut.Count == 1)
+                if (swings[i+swingsAdded].notesInCut[0].d == 8 && swings[i + swingsAdded].notesInCut.Count == 1)
                 {
                     if (emptySwing.sliceParity == Parity.Backhand)
                     {
-                        BeatCutData postResetSwing = result[i + 2];
+                        BeatCutData postResetSwing = result[i + swingsAdded];
                         postResetSwing.SetStartAngle(0);
-                        result[i + 2] = postResetSwing;
+                        postResetSwing.SetEndAngle(0);
+                        result[i + swingsAdded] = postResetSwing;
                     }
                 }
                 result.Insert(i + swingsAdded, emptySwing);

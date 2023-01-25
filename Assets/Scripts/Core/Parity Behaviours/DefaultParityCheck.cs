@@ -37,20 +37,20 @@ public class DefaultParityCheck : IParityMethod
         // Checks if either bomb reset bomb locations exist
         var bombCheckLayer = (lastCut.sliceParity == Parity.Forehand) ? 0 : 2;
         bool containsRightmost = bombs.FindIndex(x => x.x == 2 + playerXOffset && x.y == bombCheckLayer 
-        && Mathf.Abs(x.b - lastCut.notesInCut[^1].b) !<= 0.15 && Mathf.Abs(x.b - nextNote.b) !<= 0.15) != -1;
+        && Mathf.Abs(x.b - lastCut.notesInCut[^1].b) > 0.15 && Mathf.Abs(x.b - nextNote.b) > 0.15) != -1;
         bool containsLeftmost = bombs.FindIndex(x => x.x == 1 + playerXOffset && x.y == bombCheckLayer 
-        && Mathf.Abs(x.b - lastCut.notesInCut[^1].b) !<= 0.15 && Mathf.Abs(x.b - nextNote.b)! <= 0.15) != -1;
+        && Mathf.Abs(x.b - lastCut.notesInCut[^1].b) > 0.15 && Mathf.Abs(x.b - nextNote.b) > 0.15) != -1;
 
         // If there is a bomb, potentially a bomb reset
         if ((!rightHand && containsLeftmost) || (rightHand && containsRightmost))
         {
             // First check 
-            /*List<int> resetDirectionList = (lastCut.sliceParity == Parity.Forehand) ? SliceMap.forehandResetDict : SliceMap.backhandResetDict;
+            List<int> resetDirectionList = (lastCut.sliceParity == Parity.Forehand) ? SliceMap.forehandResetDict : SliceMap.backhandResetDict;
             if (resetDirectionList.Contains(lastCut.notesInCut[0].d))
             {
                 currentSwing.resetType = ResetType.Bomb;
                 return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
-            }*/
+            }
 
             // Set the angle tolerance
             float angleTolerance = 90;
@@ -64,10 +64,6 @@ public class DefaultParityCheck : IParityMethod
                 {
                     // If a dot note thats above or below the interactive bombs, and its dots, just swing
                     // around the bombs
-                    return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
-                } else if ((lastCut.sliceParity == Parity.Forehand && nextNote.y > 0 && SliceMap.BackhandDict[nextNote.d] > 45)
-                   || (lastCut.sliceParity == Parity.Backhand && nextNote.y < 2 && SliceMap.ForehandDict[nextNote.d] > 45)) {
-                    // Not a reset, can be swung with parity based on note orientation?
                     return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
                 } else {
                     currentSwing.resetType = ResetType.Bomb;
