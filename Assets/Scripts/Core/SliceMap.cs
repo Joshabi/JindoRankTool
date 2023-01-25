@@ -406,6 +406,7 @@ public class SliceMap
                         result[i + swingsAdded] = postResetSwing;
                     }
                 }
+
                 result.Insert(i + swingsAdded, emptySwing);
                 swingsAdded++;
             }
