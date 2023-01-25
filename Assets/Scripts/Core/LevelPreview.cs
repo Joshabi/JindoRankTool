@@ -66,6 +66,9 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     {
         _levelAudioLoader = GetComponent<LevelAudioLoader>();
 
+        _leftColour.a = 1.0f;
+        _rightColour.a = 1.0f;
+
         _pendingRemoval = new List<GameObject>();
         _timeToReachSabers = Mathf.Abs((Mathf.Abs(_saberZ)-3.0f) / _speed);
         _blocks = new List<ColourNote>();
@@ -85,6 +88,8 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _rightSaber.SetSaberZ(_saberZ);
         _leftSaber.SetRestingTargets();
         _rightSaber.SetRestingTargets();
+        _leftSaberDataText.color = GetLeftColour();
+        _rightSaberDataText.color = GetRightColour();
     }
 
     public Color GetLeftColour()
