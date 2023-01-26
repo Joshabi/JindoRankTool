@@ -271,26 +271,26 @@ public class SliceMap
     public BeatCutData DotChecks(BeatCutData currentSwing, BeatCutData lastSwing)
     {
         // If the entire swing is dots
-        if(currentSwing.notesInCut.Count(x => x.d == 8) == currentSwing.notesInCut.Count)
+        if(currentSwing.notesInCut.All(x => x.d == 8))
         {
             // If there is more then 1 note, indicating a dot stack, tower, or zebra slider
             if (currentSwing.notesInCut.Count > 1)
             {
-                // Check which note is closer from last swing
-                // Depending on which is closer, calculate angle
-                Vector2 lastSwingVec = LevelUtils.GetWorldXYFromBeatmapCoords(lastSwing.notesInCut[^1].x, lastSwing.notesInCut[^1].y);
-                Vector2 firstNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[0].x, currentSwing.notesInCut[0].y);
-                Vector2 lastNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[^1].x, currentSwing.notesInCut[^1].y);
+                float angle;
+                float firstToLast = AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
+                float lastToFirst = AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]);
+                if (currentSwing.notesInCut.All(x => x.b == currentSwing.notesInCut[0].b))
+                {
+                    float currentAngle = lastSwing.endPositioning.angle;
 
-                float distanceToStart = Vector2.Distance(firstNoteVec, lastSwingVec);
-                float distanceToEnd = Vector2.Distance(lastNoteVec, lastSwingVec);
+                    float FTLChange = currentAngle - firstToLast;
+                    float LTFChange = currentAngle - lastToFirst;
 
-                if (distanceToStart > distanceToEnd) {
-                    currentSwing.notesInCut.Reverse();
+                    if (Mathf.Abs(FTLChange) < Mathf.Abs(LTFChange)) { angle = firstToLast; } else { angle = lastToFirst; }
+                } else {
+                    angle = firstToLast;
                 }
 
-                var angle = AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]);
-                if(angle > 0 && lastSwing.sliceParity == Parity.Forehand) { angle -= 180; }
                 currentSwing.SetStartAngle(angle);
                 currentSwing.sliceStartBeat = currentSwing.notesInCut[0].b;
                 currentSwing.sliceEndBeat = currentSwing.notesInCut[^1].b + 0.1f;
