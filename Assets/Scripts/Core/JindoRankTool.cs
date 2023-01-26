@@ -20,6 +20,7 @@ public class JindoRankTool : MonoBehaviour
     private LevelDownloader _levelDownloader;
     private LevelSliceMapOutputter _sliceMapOutputter;
     private System.Guid _doublesAnalyserID;
+    private System.Guid _coverageAnalyserID;
 
     private void Awake()
     {
@@ -27,6 +28,7 @@ public class JindoRankTool : MonoBehaviour
 
         _sliceMapOutputter = new LevelSliceMapOutputter();
         _doublesAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapDoublesAnalyser());
+        _coverageAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapCoverageAnalyser());
 
         if (_previewMap)
         {
@@ -61,6 +63,7 @@ public class JindoRankTool : MonoBehaviour
     private void OnDestroy()
     {
         _sliceMapOutputter.UnregisterAnalyser(_doublesAnalyserID);
+        _sliceMapOutputter.UnregisterAnalyser(_coverageAnalyserID);
     }
 
     private void _levelLoader_OnLevelLoaded(BeatmapData beatmapData)
