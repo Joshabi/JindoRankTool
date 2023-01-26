@@ -39,7 +39,7 @@ public struct BeatCutData
     public bool isInverted;
     public List<ColourNote> notesInCut;
 
-    public void SetStartPosition(int x, int y) { startPositioning.x = x; endPositioning.y = y; }
+    public void SetStartPosition(int x, int y) { startPositioning.x = x; startPositioning.y = y; }
     public void SetEndPosition(int x, int y) { endPositioning.x = x; endPositioning.y = y; }
     public void SetStartAngle(float angle) { startPositioning.angle = angle; }
     public void SetEndAngle(float angle) { endPositioning.angle = angle; }
@@ -261,8 +261,8 @@ public class SliceMap
         }
         // Add empty swings in for bomb avoidance.
         // Replace later with more advanced movement to avoid bombs in general.
-        result = AddBombResetAvoidance(result);
         Debug.Log("Right Hand: " + _rightHand + " | Resets: " + result.Count(x => x.resetType == ResetType.Normal));
+        result = AddBombResetAvoidance(result);
         return result;
     }
 
@@ -278,52 +278,38 @@ public class SliceMap
             {
                 // Check which note is closer from last swing
                 // Depending on which is closer, calculate angle
-                Vector2 lastSwingVec = LevelUtils.GetWorldXYFromBeatmapCoords(lastSwing.notesInCut[0].x, lastSwing.notesInCut[0].y);
+                Vector2 lastSwingVec = LevelUtils.GetWorldXYFromBeatmapCoords(lastSwing.notesInCut[^1].x, lastSwing.notesInCut[^1].y);
                 Vector2 firstNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[0].x, currentSwing.notesInCut[0].y);
                 Vector2 lastNoteVec = LevelUtils.GetWorldXYFromBeatmapCoords(currentSwing.notesInCut[^1].x, currentSwing.notesInCut[^1].y);
 
                 float distanceToStart = Vector2.Distance(firstNoteVec, lastSwingVec);
                 float distanceToEnd = Vector2.Distance(lastNoteVec, lastSwingVec);
 
-                // Depending on Parity, calculate the cut direction of the dot stack
-                float angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                    AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]) :
-                    AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
-                currentSwing.SetStartAngle(angle);
-
-
-                if (distanceToStart > distanceToEnd)
-                {
+                if (distanceToStart > distanceToEnd) {
                     currentSwing.notesInCut.Reverse();
-
-                    angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                        AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]) :
-                        AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
-                    currentSwing.SetStartAngle(angle);
-                    currentSwing.sliceStartBeat = currentSwing.notesInCut[0].b;
-                    currentSwing.sliceEndBeat = currentSwing.notesInCut[^1].b + 0.1f;
-                    currentSwing.SetStartPosition(currentSwing.notesInCut[0].x, currentSwing.notesInCut[0].y);
-                    currentSwing.SetEndPosition(currentSwing.notesInCut[^1].x, currentSwing.notesInCut[^1].y);
                 }
 
-                // Can possibly remove? Fixes weird backhand down stack hits for the right hand? Not sure why
-                if (currentSwing.startPositioning.angle == 180 && _rightHand) currentSwing.SetStartAngle(currentSwing.startPositioning.angle * -1);
+                var angle = AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]);
+                if(angle > 0 && lastSwing.sliceParity == Parity.Forehand) { angle -= 180; }
+                currentSwing.SetStartAngle(angle);
+                currentSwing.sliceStartBeat = currentSwing.notesInCut[0].b;
+                currentSwing.sliceEndBeat = currentSwing.notesInCut[^1].b + 0.1f;
+                currentSwing.SetStartPosition(currentSwing.notesInCut[0].x, currentSwing.notesInCut[0].y);
+                currentSwing.SetEndPosition(currentSwing.notesInCut[^1].x, currentSwing.notesInCut[^1].y);
 
                 // Set ending angle equal to starting angle
                 currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
             }
         } else if (currentSwing.notesInCut[0].d == 8 && currentSwing.notesInCut[^1].d != 8) {
             // In the event its a dot then an arrow
-            currentSwing.SetStartAngle(AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity));
-            float angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                ForehandDict[currentSwing.notesInCut[^1].d] :
-                BackhandDict[currentSwing.notesInCut[^1].d];
-            currentSwing.SetEndAngle(angle);
-            currentSwing.startPositioning.angle = AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity);
-            currentSwing.endPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
-                ForehandDict[currentSwing.notesInCut[^1].d] :
-                BackhandDict[currentSwing.notesInCut[^1].d];
+            currentSwing.SetEndAngle(AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity));
+            currentSwing.SetStartAngle(AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]));
+        } else if (currentSwing.notesInCut[0].d != 8 && currentSwing.notesInCut[^1].d == 8) {
+            currentSwing.SetStartAngle(AngleGivenCutDirection(currentSwing.notesInCut[0].d, currentSwing.sliceParity));
+            currentSwing.SetEndAngle(AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]));
         }
+        // Not sure why, but this fixes the right hand on dot stacks and apparently doesn't need to be done to left?
+        if (currentSwing.startPositioning.angle == 180 && _rightHand) currentSwing.SetStartAngle(currentSwing.startPositioning.angle = 0);
         return currentSwing;
     }
 
@@ -428,7 +414,6 @@ public class SliceMap
         Vector3 firstNoteCoords = new Vector3(firstNote.x, firstNote.y, 0);
         Vector3 lastNoteCoords = new Vector3 (lastNote.x, lastNote.y, 0);
         float angle = Vector3.SignedAngle(Vector3.up, lastNoteCoords - firstNoteCoords, Vector3.forward);
-        if (!_rightHand) angle *= -1;
         return angle;
     }
     // Determines if a Note is inverted

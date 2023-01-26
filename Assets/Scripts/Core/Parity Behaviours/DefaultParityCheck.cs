@@ -14,17 +14,19 @@ public class DefaultParityCheck : IParityMethod
     private bool _upsideDown;
 
     // Returns true if the inputted note and bomb coordinates cause a reset potentially
-    private Dictionary<int, Func<Vector2, int, int, bool>> _bombDetectionConditions = new()
+    private Dictionary<int, Func<Vector2, int, int, Parity, bool>> _bombDetectionConditions = new()
     {
-        { 0, (note, x, y) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
-        { 1, (note, x, y) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
-        { 2, (note, x, y) => ((y == note.y) || (y == note.y - 1)) && x <= note.x },
-        { 3, (note, x, y) => ((y == note.y) || (y == note.y - 1)) && x >= note.x },
-        { 4, (note, x, y) => y == note.y && x == note.x && y != 0 },
-        { 5, (note, x, y) => y == note.y && x == note.x && y != 0 },
-        { 6, (note, x, y) => x == note.x && y == note.y && y != 2 },
-        { 7, (note, x, y) => x == note.x && y == note.y && y != 2 },
-        { 8, (note,x,y) => false }
+        { 0, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
+        { 1, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
+        { 2, (note, x, y, parity) => (parity == Parity.Forehand && (y == note.y || y == note.y - 1) && ((note.x != 0 && x < note.x) || (note.x > 0 && x <= note.x))) ||
+            (parity == Parity.Backhand && y == note.y && ((note.x != 0 && x < note.x) || (note.x > 0 && x <= note.x))) },
+        { 3, (note, x, y, parity) => (parity == Parity.Forehand && (y == note.y || y == note.y - 1) && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) ||
+            (parity == Parity.Backhand && y == note.y && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) },
+        { 4, (note, x, y, parity) => y == note.y && x == note.x && y != 0 },
+        { 5, (note, x, y, parity) => y == note.y && x == note.x && y != 0 },
+        { 6, (note, x, y, parity) => x == note.x && y == note.y && y != 2 },
+        { 7, (note, x, y, parity) => x == note.x && y == note.y && y != 2 },
+        { 8, (note,x,y, parity) => false }
     };
 
     public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs)
@@ -42,12 +44,13 @@ public class DefaultParityCheck : IParityMethod
 
             // Get the last note. In the case of a stack, picks the note that isnt at 2 or 0 as
             // it triggers a reset when it shouldn't.
+
             note = lastCut.notesInCut.Where(note => note.x == lastCut.endPositioning.x && note.y == lastCut.endPositioning.y).FirstOrDefault();
 
             // Get the last notes cut direction based on the last swings angle
             var lastNoteCutDir = (lastCut.sliceParity == Parity.Forehand) ?
-                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
-                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
+                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.startPositioning.angle / 45.0) * 45).Key :
+                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.startPositioning.angle / 45.0) * 45).Key;
 
             // Offset the checking if the entire outerlane bombs indicate moving inwards
             int xOffset = 0;
@@ -60,7 +63,7 @@ public class DefaultParityCheck : IParityMethod
 
             // Determine if lastnote and current bomb cause issue
             // If we already found reason to reset, no need to try again
-            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y);
+            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y, lastCut.sliceParity);
             if (bombReset) return true;
         }
         return false;
@@ -82,8 +85,8 @@ public class DefaultParityCheck : IParityMethod
 
         int orient = nextNote.d;
         if(nextNote.d == 8) orient = (lastCut.sliceParity == Parity.Forehand) ?
-                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
-                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
+                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
+                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
 
         float nextAFN = (lastCut.sliceParity == Parity.Forehand) ?
             SliceMap.BackhandDict[orient] :
@@ -109,6 +112,17 @@ public class DefaultParityCheck : IParityMethod
             currentSwing.resetType = ResetType.Bomb;
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }
+
+        // Alters big rotation swings to fall under the triangle condition below.
+        // Can cause some extreme prolonged no triangling if it trips up,
+        // need a better methodology to determine if reset by not a bomb
+        //if (currentAFN > 0) {
+        //    if (angleChange > 180 && !UpsideDown)
+       //     { angleChange -= 180; }
+        //}  else if (currentAFN < 0) {
+        //    if (angleChange < -180 && !UpsideDown)
+        //    { angleChange += 180; }
+        //}
 
         // If the angle change exceeds 180 even after accounting for bigger rotations then triangle
         if (Mathf.Abs(angleChange) > 180 && !UpsideDown)
