@@ -20,10 +20,10 @@ public class DefaultParityCheck : IParityMethod
         { 1, (note, x, y) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
         { 2, (note, x, y) => ((y == note.y) || (y == note.y - 1)) && x <= note.x },
         { 3, (note, x, y) => ((y == note.y) || (y == note.y - 1)) && x >= note.x },
-        { 4, (note, x, y) => y == note.y && x == note.x },
-        { 5, (note, x, y) => y == note.y && x == note.x },
-        { 6, (note, x, y) => x == note.x && y == note.y },
-        { 7, (note, x, y) => x == note.x && y <= note.y },
+        { 4, (note, x, y) => y == note.y && x == note.x && y != 0 },
+        { 5, (note, x, y) => y == note.y && x == note.x && y != 0 },
+        { 6, (note, x, y) => x == note.x && y == note.y && y != 2 },
+        { 7, (note, x, y) => x == note.x && y == note.y && y != 2 },
         { 8, (note,x,y) => false }
     };
 
@@ -42,38 +42,21 @@ public class DefaultParityCheck : IParityMethod
 
             // Get the last note. In the case of a stack, picks the note that isnt at 2 or 0 as
             // it triggers a reset when it shouldn't.
-            note = lastCut.notesInCut[^1];
-            if (lastCut.notesInCut.Count > 1)
-            {
-                if (lastCut.endPositioning.angle == 0 && lastCut.sliceParity == Parity.Forehand)
-                {
-                    note = lastCut.notesInCut.FirstOrDefault(x => x.y != 0);
-                }
-                else if (lastCut.endPositioning.angle == 0 && lastCut.sliceParity == Parity.Backhand)
-                {
-                    note = lastCut.notesInCut.FirstOrDefault(x => x.y != 2);
-                }
-            }
+            note = lastCut.notesInCut.Where(note => note.x == lastCut.endPositioning.x && note.y == lastCut.endPositioning.y).FirstOrDefault();
 
             // Get the last notes cut direction based on the last swings angle
             var lastNoteCutDir = (lastCut.sliceParity == Parity.Forehand) ?
                 SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
                 SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
 
-            // Offset the checking if the entire outerlane is full of bombs
+            // Offset the checking if the entire outerlane bombs indicate moving inwards
             int xOffset = 0;
-            if (note.x == 0)
-            {
-                bool a = bombs.Where(x => x.x == 0)
-                    .Where(x => x.y == 1 || x.y == 2 || x.y == 3).Any();
-                if (a) xOffset = 1;
-            }
-            else if (note.y == 1)
-            {
-                bool a = bombs.Where(x => x.x == 3)
-                    .Where(x => x.y == 1 || x.y == 2 || x.y == 3).Any();
-                if (a) xOffset = -1;
-            }
+
+            bool bombOffsetting = bombs.Any(bomb => bomb.x == note.x && (bomb.y <= note.y && lastCut.sliceParity == Parity.Backhand && lastCut.endPositioning.angle >= 0)) ||
+                bombs.Any(bomb => bomb.x == note.x && (bomb.y >= note.y && lastCut.sliceParity == Parity.Forehand && lastCut.endPositioning.angle >= 0));
+
+            if (bombOffsetting && note.x == 0) xOffset = 1;
+            if (bombOffsetting && note.x == 3) xOffset = -1;
 
             // Determine if lastnote and current bomb cause issue
             // If we already found reason to reset, no need to try again
@@ -102,7 +85,7 @@ public class DefaultParityCheck : IParityMethod
                 SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
                 SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
 
-        float nextAFN = (lastCut.sliceParity != Parity.Forehand) ?
+        float nextAFN = (lastCut.sliceParity == Parity.Forehand) ?
             SliceMap.BackhandDict[orient] :
             SliceMap.ForehandDict[orient];
 
@@ -117,27 +100,14 @@ public class DefaultParityCheck : IParityMethod
             _upsideDown = true;
         }
 
-        // Alters big rotation swings to fall under the triangle condition below.
-        // This works in the anticlockwise direction. Somehow, triangling still works.
-        if (currentAFN > 0) {
-            if (angleChange > 180 && !UpsideDown)
-            { angleChange -= 180; }
-        } else if (currentAFN < 0) {
-            if (angleChange < -180 && !UpsideDown)
-            { angleChange += 180; }
-        }
-
         // Check for potential bomb resets
         bool bombReset = BombResetCheck(lastCut, bombs);
 
         if (bombReset)
         {
-            if(Mathf.Abs(angleChange) < 180)
-            {
-                // Set as bomb reset and return same parity as last swing
-                currentSwing.resetType = ResetType.Bomb;
-                return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
-            }
+            // Set as bomb reset and return same parity as last swing
+            currentSwing.resetType = ResetType.Bomb;
+            return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }
 
         // If the angle change exceeds 180 even after accounting for bigger rotations then triangle
