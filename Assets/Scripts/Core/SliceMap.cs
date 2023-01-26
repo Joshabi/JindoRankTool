@@ -259,6 +259,7 @@ public class SliceMap
         // Add empty swings in for bomb avoidance.
         // Replace later with more advanced movement to avoid bombs in general.
         result = AddBombResetAvoidance(result);
+        Debug.Log("Right Hand: " + _rightHand + " | Resets: " + result.Count(x => x.resetType == ResetType.Normal));
         return result;
     }
 
@@ -373,7 +374,7 @@ public class SliceMap
                 BeatCutData emptySwing = new BeatCutData();
                 emptySwing.sliceParity = (swings[i].sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
                 emptySwing.sliceStartBeat = swings[i - 1].sliceEndBeat + SecondsToBeats(_BPM, 0.15f);
-                emptySwing.sliceEndBeat = emptySwing.sliceStartBeat + 0.5f;
+                emptySwing.sliceEndBeat = emptySwing.sliceStartBeat + 0.2f;
                 emptySwing.SetStartPosition(lastNote.x, lastNote.y);
 
                 // If the last hit was a dot, pick the opposing direction based on parity.
@@ -409,7 +410,7 @@ public class SliceMap
 
     #region Helper Functions
     // Given a cut direction ID, return angle from appropriate dictionary
-    private float AngleGivenCutDirection(int cutDirection, Parity parity)
+    public static float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
         return (parity == Parity.Forehand) ? ForehandDict[cutDirection] : BackhandDict[cutDirection];
     }
