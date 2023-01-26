@@ -113,16 +113,16 @@ public class DefaultParityCheck : IParityMethod
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }
 
-        // Alters big rotation swings to fall under the triangle condition below.
-        // Can cause some extreme prolonged no triangling if it trips up,
-        // need a better methodology to determine if reset by not a bomb
-        //if (currentAFN > 0) {
-        //    if (angleChange > 180 && !UpsideDown)
-       //     { angleChange -= 180; }
-        //}  else if (currentAFN < 0) {
-        //    if (angleChange < -180 && !UpsideDown)
-        //    { angleChange += 180; }
-        //}
+        // AKA, If a 180 anticlockwise (right) clockwise (left) rotation
+        if (lastCut.endPositioning.angle == 180) {
+            var altNextAFN = 180 + nextAFN;
+            if(altNextAFN >= 0) {
+                return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
+            } else {
+                currentSwing.resetType = ResetType.Normal;
+                return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
+            }
+        }
 
         // If the angle change exceeds 180 even after accounting for bigger rotations then triangle
         if (Mathf.Abs(angleChange) > 180 && !UpsideDown)
