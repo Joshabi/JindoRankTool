@@ -164,6 +164,7 @@ public class SliceMap
             sData.sliceParity = Parity.Forehand;
             sData.sliceStartBeat = notesInSwing[0].b;
             sData.sliceEndBeat = notesInSwing[^1].b + 0.1f;
+
             sData.SetStartPosition(notesInSwing[0].x, notesInSwing[0].y);
             sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
             sData.SetEndPosition(notesInSwing[^1].x, notesInSwing[^1].y);
@@ -173,6 +174,7 @@ public class SliceMap
             if (result.Count == 0) {
                 if (currentNote.d == 0 || currentNote.d == 4 || currentNote.d == 5) {
                     sData.sliceParity = Parity.Backhand;
+
                     sData.SetStartAngle(BackhandDict[notesInSwing[0].d]);
                     sData.SetEndAngle(BackhandDict[notesInSwing[^1].d]);
                 }
@@ -229,6 +231,7 @@ public class SliceMap
 
             // Work out Parity
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
+
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, ref sData, bombsBetweenSwings, _playerXOffset, _rightHand);
 
             // If backhand, readjust start and end angle
@@ -288,9 +291,11 @@ public class SliceMap
                     AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
                 currentSwing.SetStartAngle(angle);
 
+
                 if (distanceToStart > distanceToEnd)
                 {
                     currentSwing.notesInCut.Reverse();
+
                     angle = (currentSwing.sliceParity == Parity.Forehand) ?
                         AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]) :
                         AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
@@ -314,6 +319,10 @@ public class SliceMap
                 ForehandDict[currentSwing.notesInCut[^1].d] :
                 BackhandDict[currentSwing.notesInCut[^1].d];
             currentSwing.SetEndAngle(angle);
+            currentSwing.startPositioning.angle = AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity);
+            currentSwing.endPositioning.angle = (currentSwing.sliceParity == Parity.Forehand) ?
+                ForehandDict[currentSwing.notesInCut[^1].d] :
+                BackhandDict[currentSwing.notesInCut[^1].d];
         }
         return currentSwing;
     }
