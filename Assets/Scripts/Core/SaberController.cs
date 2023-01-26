@@ -24,7 +24,7 @@ public class SaberController : MonoBehaviour
     private float _maxPalmOrientDrag = 50.0f;
     private float _maxWristPositDrag = 120.0f;
     private float _minWristOrientDrag = 40.0f;
-    private float _minPalmOrientDrag = 24.0f;
+    private float _minPalmOrientDrag = 30.0f;
     private float _minWristPositDrag = 40.0f;
     private float _wristOrientDrag;
     private float _palmOrientDrag;
@@ -57,7 +57,7 @@ public class SaberController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        _wristOrientDrag -= (_wristOrientDrag - _targetWristOrientDrag) / 10.0f;
+        _wristOrientDrag -= (_wristOrientDrag - _targetWristOrientDrag) / 30.0f;
         _palmOrientDrag -= (_palmOrientDrag - _targetPalmOrientDrag) / 5.0f;
         _wristPositDrag -= (_wristPositDrag - _targetWristPositDrag) / 10.0f;
         _wristOrientation -= (_wristOrientation - (_targetWristOrientation + 5.0f*Mathf.Sin(Time.time))) / _wristOrientDrag;
