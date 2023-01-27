@@ -276,26 +276,46 @@ public class SliceMap
             // If there is more then 1 note, indicating a dot stack, tower, or zebra slider
             if (currentSwing.notesInCut.Count > 1)
             {
+                // Get the first and last note based on beats
                 float angle;
-                float firstToLast = AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]);
-                float lastToFirst = AngleBetweenNotes(currentSwing.notesInCut[^1], currentSwing.notesInCut[0]);
-                if (currentSwing.notesInCut.All(x => x.b == currentSwing.notesInCut[0].b))
+                ColourNote firstNote = currentSwing.notesInCut.OrderBy(x => x.b).FirstOrDefault();
+                ColourNote lastNote = currentSwing.notesInCut.OrderBy(x => x.b).LastOrDefault();
+                float firstToLast = AngleBetweenNotes(firstNote, lastNote);
+                float lastToFirst = AngleBetweenNotes(lastNote, firstNote);
+                float currentAngle = lastSwing.endPositioning.angle;
+
+                // Determine the angle change between current angle and next
+                float FTLChange = currentAngle - firstToLast;
+                float LTFChange = currentAngle - lastToFirst;
+
+                // Depending on which is less change, set the angle.
+                // Need some decision making logic here if hitting it either way is the same rotation
+                if (Mathf.Abs(FTLChange) < Mathf.Abs(LTFChange)) { angle = firstToLast; } 
+                else if(Mathf.Abs(FTLChange) > Mathf.Abs(LTFChange)) { angle = lastToFirst; }
+                else
                 {
-                    float currentAngle = lastSwing.endPositioning.angle;
+                    // In the event the angle change is the same hitting either note first. Do some additional checks
+                    // based on the distance to the note
+                    Vector2 lastHitNotePosition = new(lastSwing.endPositioning.x, lastSwing.endPositioning.y);
+                    Vector2 firstNoteVec = new(firstNote.x, firstNote.y);
+                    Vector2 lastNoteVec = new(lastNote.x, lastNote.y);
 
-                    float FTLChange = currentAngle - firstToLast;
-                    float LTFChange = currentAngle - lastToFirst;
+                    float distToFirst = Vector2.Distance(firstNoteVec, lastHitNotePosition);
+                    float distToLast = Vector2.Distance(lastNoteVec, lastHitNotePosition);
 
-                    if (Mathf.Abs(FTLChange) < Mathf.Abs(LTFChange)) { angle = firstToLast; } else { angle = lastToFirst; }
-                } else {
-                    angle = firstToLast;
+                    if (Mathf.Abs(distToFirst) < Mathf.Abs(distToLast)) { angle = firstToLast; }
+                    else { angle = lastToFirst; }
+
+                    // NOTE: I dont think it can be the same angle change and equal distance to the next note?
+                    // This should work.
                 }
 
+                // Configure the swing
                 currentSwing.SetStartAngle(angle);
-                currentSwing.sliceStartBeat = currentSwing.notesInCut[0].b;
-                currentSwing.sliceEndBeat = currentSwing.notesInCut[^1].b + 0.1f;
-                currentSwing.SetStartPosition(currentSwing.notesInCut[0].x, currentSwing.notesInCut[0].y);
-                currentSwing.SetEndPosition(currentSwing.notesInCut[^1].x, currentSwing.notesInCut[^1].y);
+                currentSwing.sliceStartBeat = firstNote.b;
+                currentSwing.sliceEndBeat = lastNote.b + 0.1f;
+                currentSwing.SetStartPosition(firstNote.x, firstNote.y);
+                currentSwing.SetEndPosition(lastNote.x, lastNote.y);
 
                 // Set ending angle equal to starting angle
                 currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
@@ -317,23 +337,26 @@ public class SliceMap
     private BeatCutData FixDotOrientation(BeatCutData lastSwing, BeatCutData currentSwing)
     {
         // Get the previous and current notes
-        ColourNote lastNote = lastSwing.notesInCut[^1];
+        ColourNote lastNote = lastSwing.notesInCut[lastSwing.notesInCut.Count - 1];
         ColourNote currentNote = currentSwing.notesInCut[0];
 
-        if (lastNote.d != 8) {
-            float angle = (currentSwing.sliceParity == Parity.Forehand) ?
+        if (lastNote.d != 8)
+        {
+            currentSwing.SetStartAngle((currentSwing.sliceParity == Parity.Forehand) ?
                 AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Forehand) :
-                AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Backhand);
-            currentSwing.SetStartAngle(angle);
-            currentSwing.SetEndAngle(angle);
-        } else {
+                AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Backhand));
+            currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
+        }
+        else
+        {
             // If the notes are on the same layer, generate the angle based on the end and starting hand positions
             Vector2 lastHandCoords = new Vector2(lastSwing.endPositioning.x, lastSwing.endPositioning.y);
             Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
             float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
-            
+
             // Correct the angle for backhand hits
-            if (currentSwing.sliceParity == Parity.Backhand) {
+            if (currentSwing.sliceParity == Parity.Backhand)
+            {
                 if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
             }
 
@@ -348,6 +371,7 @@ public class SliceMap
         }
         return currentSwing;
     }
+
 
     // Attempts to add bomb avoidance based on the isReset tag for a list of swings.
     // NOTE: To improve this, probably want bomb detection in its own function and these swings
