@@ -9,17 +9,19 @@ public class ResetParityCheck : IParityMethod
     private bool _upsideDown;
 
     // Returns true if the inputted note and bomb coordinates cause a reset potentially
-    private Dictionary<int, Func<Vector2, int, int, bool>> _bombDetectionConditions = new()
+    private Dictionary<int, Func<Vector2, int, int, Parity, bool>> _bombDetectionConditions = new()
     {
-        { 0, (note, x, y) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
-        { 1, (note, x, y) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
-        { 2, (note, x, y) => ((y == note.y) || (y == note.y - 1)) && x <= note.x },
-        { 3, (note, x, y) => ((y == note.y) || (y == note.y - 1)) && x >= note.x },
-        { 4, (note, x, y) => y == note.y && x == note.x && y != 0 },
-        { 5, (note, x, y) => y == note.y && x == note.x && y != 0 },
-        { 6, (note, x, y) => x == note.x && y == note.y && y != 2 },
-        { 7, (note, x, y) => x == note.x && y == note.y && y != 2 },
-        { 8, (note, x, y) => false }
+        { 0, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
+        { 1, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
+        { 2, (note, x, y, parity) => (parity == Parity.Forehand && (y == note.y || y == note.y - 1) && ((note.x != 0 && x < note.x) || (note.x > 0 && x <= note.x))) ||
+            (parity == Parity.Backhand && y == note.y && ((note.x != 0 && x < note.x) || (note.x > 0 && x <= note.x))) },
+        { 3, (note, x, y, parity) => (parity == Parity.Forehand && (y == note.y || y == note.y - 1) && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) ||
+            (parity == Parity.Backhand && y == note.y && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) },
+        { 4, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
+        { 5, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
+        { 6, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
+        { 7, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
+        { 8, (note,x,y, parity) => false }
     };
 
     public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs)

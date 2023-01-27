@@ -22,10 +22,10 @@ public class DefaultParityCheck : IParityMethod
             (parity == Parity.Backhand && y == note.y && ((note.x != 0 && x < note.x) || (note.x > 0 && x <= note.x))) },
         { 3, (note, x, y, parity) => (parity == Parity.Forehand && (y == note.y || y == note.y - 1) && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) ||
             (parity == Parity.Backhand && y == note.y && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) },
-        { 4, (note, x, y, parity) => y == note.y && x == note.x && y != 0 },
-        { 5, (note, x, y, parity) => y == note.y && x == note.x && y != 0 },
-        { 6, (note, x, y, parity) => x == note.x && y == note.y && y != 2 },
-        { 7, (note, x, y, parity) => x == note.x && y == note.y && y != 2 },
+        { 4, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
+        { 5, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
+        { 6, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
+        { 7, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
         { 8, (note,x,y, parity) => false }
     };
 
