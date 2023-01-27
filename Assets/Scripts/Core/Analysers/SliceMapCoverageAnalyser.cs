@@ -136,4 +136,9 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
     {
         return "coverage";
     }
+
+    public override string GetAnalyticsDescription()
+    {
+        return "Returns a percentage denoting how much of the acc grid is covered by unique configurations of notes. 0 = empty acc grid, 1 = every possible direction and colour occupies every space on the grid. Higher values are indicative of more variety in patterns.";
+    }
 }

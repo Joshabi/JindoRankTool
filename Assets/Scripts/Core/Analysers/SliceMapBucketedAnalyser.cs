@@ -5,7 +5,15 @@ using UnityEngine;
 /**
  * SliceMapBucketedAnalyser
  * 
- * Base class for an analyser that wants to bucket its data in to segments of X seconds
+ * Base class for an analyser that wants to bucket its data in to segments of X seconds.
+ * 
+ * The JSON output supplies an overall value, values for each of the buckets,
+ * and a 'secondsPerBucket' value to give context to the density of the bucket data.
+ * 
+ * Use SetOverallValue and SetBucketValue to update the output data.
+ * secondsPerBucket is populated in the ProcessSliceMaps base implementation.
+ * 
+ * TODO: Probably turn this in to a generic class where T controls the type of overallValue and bucketValues.
  */
 public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
 {
@@ -47,6 +55,8 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
 
     public abstract string GetAnalyticsName();
 
+    public abstract string GetAnalyticsDescription();
+
     public string GetAnalyticsData()
     {
         return JsonUtility.ToJson(_data, prettyPrint: true);
@@ -69,11 +79,17 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
         return _numBuckets;
     }
 
+    /**
+     * Set the overall value of this analyser's output.
+     */
     protected void SetOverallValue(float inOverallValue)
     {
         _data.overallValue = inOverallValue;
     }
 
+    /**
+     * Set the value of the bucket at the given index.
+     */
     protected void SetBucketValue(int bucketIndex, float inBucketValue)
     {
         if (bucketIndex >= 0 && bucketIndex <= _data.bucketValues.Length)

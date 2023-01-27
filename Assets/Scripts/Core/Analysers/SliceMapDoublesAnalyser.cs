@@ -118,4 +118,9 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
     {
         return "doubles";
     }
+
+    public override string GetAnalyticsDescription()
+    {
+        return "Returns a ratio of double swings to single swings. Double swings are counted as one swing in the ratio. 0 = No double swings, 1 = all swings are doubles.";
+    }
 }

@@ -10,6 +10,7 @@ public class LevelSliceMapOutputter
     public struct LevelSliceMapAnalyticsObject
     {
         public string name;
+        public string description;
         public string data;
     }
 
@@ -52,6 +53,7 @@ public class LevelSliceMapOutputter
 
             LevelSliceMapAnalyticsObject analyserObject = new LevelSliceMapAnalyticsObject();
             analyserObject.name = analyser.GetAnalyticsName();
+            analyserObject.description = analyser.GetAnalyticsDescription();
             analyserObject.data = analyser.GetAnalyticsData();
             analytics.Add(analyserObject);
         }
