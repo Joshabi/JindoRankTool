@@ -57,7 +57,7 @@ public class ResetParityCheck : IParityMethod
 
             // Determine if lastnote and current bomb cause issue
             // If we already found reason to reset, no need to try again
-            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y);
+            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y, lastCut.sliceParity);
             if (bombReset) return true;
         }
         return false;
