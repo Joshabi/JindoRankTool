@@ -17,8 +17,6 @@ public class LevelSliceMapOutputter
     struct LevelSliceMapHeader
     {
         public BeatmapStructure mapMetadata;
-        public List<BeatCutData> leftHandCutData;
-        public List<BeatCutData> rightHandCutData;
     }
 
     Dictionary<System.Guid, ISliceMapAnalyser> _analysers;
@@ -47,10 +45,6 @@ public class LevelSliceMapOutputter
 
         LevelSliceMapHeader header = new LevelSliceMapHeader();
         header.mapMetadata = beatmapData.Metadata;
-        header.leftHandCutData = new List<BeatCutData>();
-        header.rightHandCutData = new List<BeatCutData>();
-        leftHandSliceMap.WriteBeatCutDataToList(header.leftHandCutData);
-        rightHandSliceMap.WriteBeatCutDataToList(header.rightHandCutData);
         List<LevelSliceMapAnalyticsObject> analytics = new List<LevelSliceMapAnalyticsObject>();
         foreach (ISliceMapAnalyser analyser in _analysers.Values)
         {
