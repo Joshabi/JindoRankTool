@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.Networking;
 
 [RequireComponent(typeof(LevelDownloader))]
 [RequireComponent(typeof(LevelPreview))]
@@ -11,7 +11,7 @@ public class JindoRankTool : MonoBehaviour
     [SerializeField] private string _customLevelPath;
     [SerializeField] private BeatmapDifficultyRank _desiredDifficulty;
     [SerializeField] private bool _previewMap = true;
-    [SerializeField] private string _beatSaberMapIDCSV;
+    [SerializeField] private string _playlistURL;
 
     [SerializeField] private float _timeScale = 1.0f;
 
@@ -40,34 +40,36 @@ public class JindoRankTool : MonoBehaviour
             _levelLoader.LoadLevel(_customLevelPath, _levelLoader_OnLevelLoaded);
         }
 
-        if (_beatSaberMapIDCSV.Length > 0)
+        if (_playlistURL.Length > 0)
         {
-            _mapDifficulties = new Dictionary<string, HashSet<BeatmapDifficultyRank>>();
-            string[] codes = _beatSaberMapIDCSV.Split(',');
-            foreach (string code in codes)
-            {
-                if (code.Contains(':'))
-                {
-                    string levelID = code.Split(':')[0];
-                    BeatmapDifficultyRank difficulty = StringToDifficulty(code.Split(':')[1]);
-                    if (_mapDifficulties.ContainsKey(levelID))
-                    {
-                        _mapDifficulties[levelID].Add(difficulty);
-                    }
-                    else
-                    {
-                        _mapDifficulties.Add(levelID, new HashSet<BeatmapDifficultyRank>() { difficulty });
-                    }
-                }
-            }
-
             _levelDownloader = GetComponent<LevelDownloader>();
-            _levelDownloader.OnLevelDownloadsCompleted += OnLevelDownloadsComplete;
-            _levelDownloader.DownloadLevels(_beatSaberMapIDCSV);
+            _levelDownloader.OnLevelDownloaded += OnLevelDownloadComplete;
+            StartCoroutine(DownloadPlaylist(_playlistURL));
         }
         else
         {
             OnLevelDownloadsComplete();
+        }
+    }
+
+    private IEnumerator DownloadPlaylist(string url)
+    {
+        using (UnityWebRequest playlistRequest = UnityWebRequest.Get(_playlistURL))
+        {
+            yield return playlistRequest.SendWebRequest();
+
+            if (playlistRequest.isDone)
+            {
+                string playlistJSON = playlistRequest.downloadHandler.text;
+                PlaylistReader playlistReader = new PlaylistReader();
+                _mapDifficulties = playlistReader.GetMapsFromPlaylist(playlistJSON);
+                List<MapDownloadRequest> requestList = new List<MapDownloadRequest>();
+                foreach (string code in _mapDifficulties.Keys)
+                {
+                    requestList.Add(new MapDownloadRequest(MapCodeType.Hash, code));
+                }
+                _levelDownloader.DownloadLevels(requestList);
+            }
         }
     }
 
@@ -77,18 +79,27 @@ public class JindoRankTool : MonoBehaviour
         string[] levelPaths = System.IO.Directory.GetDirectories(PathUtils.GetImportDirectory());
         foreach (string levelPath in levelPaths)
         {
-            string code = levelPath.Split('\\')[^1];
-            if (_mapDifficulties.ContainsKey(code))
+            OnLevelDownloadComplete(levelPath);
+        }
+    }
+
+    private void OnLevelDownloadComplete(string levelPath)
+    {
+        if (_levelLoader == null)
+        {
+            _levelLoader = new LevelLoader();
+        }
+        string code = levelPath.Remove(levelPath.Length-1).Split('/')[^1];
+        if (_mapDifficulties.ContainsKey(code))
+        {
+            foreach (BeatmapDifficultyRank difficulty in _mapDifficulties[code])
             {
-                foreach (BeatmapDifficultyRank difficulty in _mapDifficulties[code])
-                {
-                    _levelLoader.LoadLevel(levelPath, difficulty, _levelLoader_OnLevelLoaded);
-                }
+                _levelLoader.LoadLevel(levelPath, difficulty, _levelLoader_OnLevelLoaded);
             }
-            else
-            {
-                _levelLoader.LoadLevel(levelPath, _levelLoader_OnLevelLoaded);
-            }
+        }
+        else
+        {
+            _levelLoader.LoadLevel(levelPath, _levelLoader_OnLevelLoaded);
         }
     }
 
@@ -101,19 +112,5 @@ public class JindoRankTool : MonoBehaviour
     private void _levelLoader_OnLevelLoaded(BeatmapData beatmapData)
     {
         _sliceMapOutputter.ProcessBeatmap(beatmapData);
-    }
-    private BeatmapDifficultyRank StringToDifficulty(string inDifficulty)
-    {
-        switch (inDifficulty.ToLower())
-        {
-            case "easy": return BeatmapDifficultyRank.Easy;
-            case "normal": return BeatmapDifficultyRank.Normal;
-            case "hard": return BeatmapDifficultyRank.Hard;
-            case "expert": return BeatmapDifficultyRank.Expert;
-            case "expertplus": return BeatmapDifficultyRank.ExpertPlus;
-            case "expert+": return BeatmapDifficultyRank.ExpertPlus;
-        }
-
-        return BeatmapDifficultyRank.Easy;
     }
 }

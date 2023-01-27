@@ -73,8 +73,7 @@ public class LevelLoader
         BeatmapData beatmap = new BeatmapData();
         beatmap.Metadata = difficulty;
         beatmap.Metadata.bpm = loadedLevel._beatsPerMinute;
-        if (loadedLevel._songName.Contains("/")) { loadedLevel._songName = loadedLevel._songName.Replace("/", string.Empty); }
-        beatmap.Metadata.mapName = loadedLevel._songName;
+        beatmap.Metadata.mapName = SanitizeFilename(loadedLevel._songName);
         beatmap.Metadata.songFilename = loadedLevel._songFilename;
         beatmap.BeatData = beatDataV3;
 
@@ -82,5 +81,13 @@ public class LevelLoader
         {
             onLevelLoadCallback(beatmap);
         }
+    }
+
+    private string SanitizeFilename(string name)
+    {
+        string invalidChars = System.Text.RegularExpressions.Regex.Escape(new string(System.IO.Path.GetInvalidFileNameChars()));
+        string invalidRegStr = string.Format(@"([{0}]*\.+$)|([{0}]+)", invalidChars);
+
+        return System.Text.RegularExpressions.Regex.Replace(name, invalidRegStr, "");
     }
 }
