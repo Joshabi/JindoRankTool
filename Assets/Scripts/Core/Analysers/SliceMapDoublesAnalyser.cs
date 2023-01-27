@@ -11,8 +11,6 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
         public int DoubleCount;
     }
 
-    private SingleDoubleCounter[] _singlesDoublesBuckets;
-
     enum HandMode
     {
         Left,
@@ -29,7 +27,7 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
 
         float bpm = mapMetadata.bpm;
         int bucketCount = GetBucketCount();
-        _singlesDoublesBuckets = new SingleDoubleCounter[bucketCount];
+        SingleDoubleCounter[] singlesDoublesBuckets = new SingleDoubleCounter[bucketCount];
 
         HandMode currentHand = HandMode.Left;
         int leftSliceIndex = 0;
@@ -60,11 +58,11 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
             int bucketIndex = GetBucketIndexFromBeat(bpm, leftBeatCutData.sliceStartBeat);
             if (isDouble)
             {
-                _singlesDoublesBuckets[bucketIndex].DoubleCount++;
+                singlesDoublesBuckets[bucketIndex].DoubleCount++;
             }
             else
             {
-                _singlesDoublesBuckets[bucketIndex].SingleCount++;
+                singlesDoublesBuckets[bucketIndex].SingleCount++;
             }
 
             if (currentHand == HandMode.Left)
@@ -96,8 +94,8 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
         int totalDoubleCuts = 0;
         for (int index = 0; index < bucketCount; ++index)
         {
-            int singleCount = _singlesDoublesBuckets[index].SingleCount;
-            int doubleCount = _singlesDoublesBuckets[index].DoubleCount;
+            int singleCount = singlesDoublesBuckets[index].SingleCount;
+            int doubleCount = singlesDoublesBuckets[index].DoubleCount;
             if (singleCount == 0 && doubleCount == 0)
             {
                 SetBucketValue(index, 0);

@@ -69,6 +69,7 @@ public class LevelSliceMapOutputter
             LevelSliceMapAnalyticsObject analyticsObject = analytics[i];
             outputJson += "\n{";
             outputJson += "\n\"name\": \"" + analyticsObject.name + "\",";
+            outputJson += "\n\"description\": \"" + analyticsObject.description + "\",";
             outputJson += "\n\"data\":";
             outputJson += analyticsObject.data;
             outputJson += "\n}";
@@ -87,6 +88,8 @@ public class LevelSliceMapOutputter
         string path = Application.persistentDataPath + "/Export/";
 #endif
         System.IO.Directory.CreateDirectory(path);
-        System.IO.File.WriteAllText(path + beatmapData.Metadata.mapName + "_" + beatmapData.Metadata._difficultyRank.ToString() + "_" + beatmapData.Metadata._difficulty + "_analytics.json", outputJson);
+        string fileName = beatmapData.Metadata.mapName + "_" + beatmapData.Metadata._difficultyRank.ToString() + "_" + beatmapData.Metadata._difficulty + "_analytics.json";
+        System.IO.File.WriteAllText(path + fileName, outputJson);
+        Debug.Log("Writing \"" + fileName + "\".");
     }
 }

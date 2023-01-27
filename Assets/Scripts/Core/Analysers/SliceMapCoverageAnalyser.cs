@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 /**
@@ -11,7 +12,8 @@ using UnityEngine;
 public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
 {
 
-    public struct AccGridPosition
+    [DebuggerDisplay("x = {x}, y = {y}, c = {c}, d = {d}")]
+    class AccGridPosition
     {
 
         public AccGridPosition(ColourNote n)
@@ -22,10 +24,28 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
             d = n.d;
         }
 
-        public int x;
-        public int y;
-        public int c;
-        public int d;
+        public int x = 0;
+        public int y = 0;
+        public int c = 0;
+        public int d = 0;
+
+        public override bool Equals(object obj)
+        {
+            AccGridPosition other = (AccGridPosition)obj;
+            if (other != null)
+            {
+                return x == other.x
+                    && y == other.y
+                    && c == other.c
+                    && d == other.d;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return ((c + 1) * 1000) + (d * 100) + (y * 10) + x;
+        }
     }
 
     class BlockFrequencyAccGrid
@@ -36,13 +56,6 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
         }
 
         public Dictionary<AccGridPosition, int> FrequencyMap;
-    }
-
-    private List<BlockFrequencyAccGrid> _bucketsForCoverageCounting;
-
-    public SliceMapCoverageAnalyser()
-    {
-        _bucketsForCoverageCounting = new List<BlockFrequencyAccGrid>();
     }
 
     private float GetCoverageFactor(List<BlockFrequencyAccGrid> inBlockCountsList)
@@ -84,7 +97,7 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
         return inBlockCounts.FrequencyMap.Keys.Count;
     }
 
-    private void CountBlocksInSliceMap(float bpm, SliceMap inSliceMap)
+    private void CountBlocksInSliceMap(float bpm, SliceMap inSliceMap, List<BlockFrequencyAccGrid> bucketsForCoverageCounting)
     {
         int numCuts = inSliceMap.GetSliceCount();
         int cutIndex = 0;
@@ -95,15 +108,19 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
             {
                 foreach (ColourNote note in cut.notesInCut)
                 {
+                    if (note.c > 1)
+                    {
+                        continue;
+                    }
                     int bucketIndex = GetBucketIndexFromBeat(bpm, note.b);
                     AccGridPosition position = new AccGridPosition(note);
-                    if (!_bucketsForCoverageCounting[bucketIndex].FrequencyMap.ContainsKey(position))
+                    if (!bucketsForCoverageCounting[bucketIndex].FrequencyMap.ContainsKey(position))
                     {
-                        _bucketsForCoverageCounting[bucketIndex].FrequencyMap.Add(position, 1);
+                        bucketsForCoverageCounting[bucketIndex].FrequencyMap.Add(position, 1);
                     }
                     else
                     {
-                        _bucketsForCoverageCounting[bucketIndex].FrequencyMap[position]++;
+                        bucketsForCoverageCounting[bucketIndex].FrequencyMap[position]++;
                     }
                 }
             }
@@ -115,21 +132,23 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
     {
         base.ProcessSliceMaps(mapMetadata, leftHand, rightHand);
 
+        List<BlockFrequencyAccGrid> bucketsForCoverageCounting = new List<BlockFrequencyAccGrid>();
+
         float bpm = mapMetadata.bpm;
         int bucketCount = GetBucketCount();
         for (int bucketIndex = 0; bucketIndex < bucketCount; ++bucketIndex)
         {
-            _bucketsForCoverageCounting.Add(new BlockFrequencyAccGrid());
+            bucketsForCoverageCounting.Add(new BlockFrequencyAccGrid());
         }
 
-        CountBlocksInSliceMap(bpm, leftHand);
-        CountBlocksInSliceMap(bpm, rightHand);
+        CountBlocksInSliceMap(bpm, leftHand, bucketsForCoverageCounting);
+        CountBlocksInSliceMap(bpm, rightHand, bucketsForCoverageCounting);
 
         for (int bucketIndex = 0; bucketIndex < bucketCount; ++bucketIndex)
         {
-            SetBucketValue(bucketIndex, GetCoverageFactor(_bucketsForCoverageCounting[bucketIndex]));
+            SetBucketValue(bucketIndex, GetCoverageFactor(bucketsForCoverageCounting[bucketIndex]));
         }
-        SetOverallValue(GetCoverageFactor(_bucketsForCoverageCounting));
+        SetOverallValue(GetCoverageFactor(bucketsForCoverageCounting));
     }
 
     public override string GetAnalyticsName()

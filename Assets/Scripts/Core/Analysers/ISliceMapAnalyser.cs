@@ -11,7 +11,11 @@ using UnityEngine;
 public interface ISliceMapAnalyser
 {
 
-    // Receive the slice maps and process them.
+    /** 
+     * Receive the slice maps and process them.
+     *
+     * Try to confine all of the necessary state to this function, as each analyser is re-used for all maps.
+     */
     void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand);
 
     // Return the name of this analyser.
