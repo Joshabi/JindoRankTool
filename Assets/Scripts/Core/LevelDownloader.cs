@@ -26,12 +26,18 @@ public class LevelDownloader : MonoBehaviour
     public delegate void LevelDownloadsCompleteEvent();
     public event LevelDownloaderEvent OnLevelDownloaded;
     public event LevelDownloadsCompleteEvent OnLevelDownloadsCompleted;
-    
+
     private readonly string apiMapIDURL = "https://api.beatsaver.com/maps/id/";
 
+    private HashSet<string> _downloadingMapIDSet;
     private int _downloadsRequested = 0;
     private int _downloadsInProgress = 0;
     private int _downloadsComplete = 0;
+
+    private void Awake()
+    {
+        _downloadingMapIDSet = new HashSet<string>();
+    }
 
     public void DownloadLevels(string levelIDCSV)
     {
@@ -53,18 +59,31 @@ public class LevelDownloader : MonoBehaviour
     {
         ++_downloadsRequested;
 
-        if (levelID.Length == 0 || !ValidateLevelID(levelID))
+        string ID = levelID.Split(':')[0];
+
+        if (!ValidateLevelID(ID))
         {
             ++_downloadsComplete;
             return;
         }
 
+        _downloadingMapIDSet.Add(ID);
         ++_downloadsInProgress;
-        StartCoroutine(GetAPIRequest(levelID));
+        StartCoroutine(GetAPIRequest(ID));
     }
 
     private bool ValidateLevelID(string levelID)
     {
+        if (levelID.Length == 0)
+        {
+            return false;
+        }
+
+        if (_downloadingMapIDSet.Contains(levelID))
+        {
+            return false;
+        }
+
         foreach (char character in levelID)
         {
             if ((character >= 'a' && character <= 'f') || (character >= '0' && character <= '9'))
@@ -113,6 +132,7 @@ public class LevelDownloader : MonoBehaviour
                     zip.ExtractToDirectory(mapDirectory);
                     --_downloadsInProgress;
                     ++_downloadsComplete;
+                    _downloadingMapIDSet.Remove(levelID);
                     if (OnLevelDownloaded != null)
                     {
                         OnLevelDownloaded(mapDirectory);
@@ -138,7 +158,7 @@ public class LevelDownloader : MonoBehaviour
             }
             System.IO.Directory.Delete(directory);
 #if UNITY_EDITOR
-            System.IO.File.Delete(directory+".meta");
+            System.IO.File.Delete(directory + ".meta");
 #endif
         }
     }
