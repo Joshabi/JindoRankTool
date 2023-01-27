@@ -2,14 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[System.Serializable]
-public struct SliceMapCoverageAnalytics
-{
-    public float overallCoverageFactor;
-    public float[] coverageFactorBucketed;
-    public float bucketDurationInSeconds;
-}
-
 /**
  * SliceMapCoverageAnalyser
  * 
@@ -47,11 +39,9 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
     }
 
     private List<BlockFrequencyAccGrid> _bucketsForCoverageCounting;
-    private SliceMapCoverageAnalytics _analytics;
 
     public SliceMapCoverageAnalyser()
     {
-        _analytics = new SliceMapCoverageAnalytics();
         _bucketsForCoverageCounting = new List<BlockFrequencyAccGrid>();
     }
 
@@ -127,7 +117,6 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
 
         float bpm = mapMetadata.bpm;
         int bucketCount = GetBucketCount();
-        _analytics.bucketDurationInSeconds = GetBucketDurationInSeconds();
         for (int bucketIndex = 0; bucketIndex < bucketCount; ++bucketIndex)
         {
             _bucketsForCoverageCounting.Add(new BlockFrequencyAccGrid());
@@ -136,21 +125,15 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
         CountBlocksInSliceMap(bpm, leftHand);
         CountBlocksInSliceMap(bpm, rightHand);
 
-        _analytics.coverageFactorBucketed = new float[bucketCount];
         for (int bucketIndex = 0; bucketIndex < bucketCount; ++bucketIndex)
         {
-            _analytics.coverageFactorBucketed[bucketIndex] = GetCoverageFactor(_bucketsForCoverageCounting[bucketIndex]);
+            SetBucketValue(bucketIndex, GetCoverageFactor(_bucketsForCoverageCounting[bucketIndex]));
         }
-        _analytics.overallCoverageFactor = GetCoverageFactor(_bucketsForCoverageCounting);
+        SetOverallValue(GetCoverageFactor(_bucketsForCoverageCounting));
     }
 
     public override string GetAnalyticsName()
     {
         return "coverage";
-    }
-
-    public override string GetAnalyticsData()
-    {
-        return JsonUtility.ToJson(_analytics, prettyPrint: true);
     }
 }

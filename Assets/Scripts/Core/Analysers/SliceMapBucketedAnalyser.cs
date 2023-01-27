@@ -10,6 +10,15 @@ using UnityEngine;
 public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
 {
 
+    [System.Serializable]
+    protected struct Data
+    {
+        public float overallValue;
+        public float[] bucketValues;
+        public float secondsPerBucket;
+    }
+
+    private Data _data;
     private float _bucketDurationInSeconds = 10.0f;
     private int _numBuckets = 0;
 
@@ -24,17 +33,24 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
 
     public virtual void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
     {
+        _data = new Data();
+        _data.secondsPerBucket = _bucketDurationInSeconds;
+
         List<BeatCutData> leftCuts = new List<BeatCutData>();
         List<BeatCutData> rightCuts = new List<BeatCutData>();
         leftHand.WriteBeatCutDataToList(leftCuts);
         rightHand.WriteBeatCutDataToList(rightCuts);
         float lastBeat = Mathf.Max(leftCuts[leftCuts.Count - 1].sliceEndBeat, rightCuts[rightCuts.Count - 1].sliceEndBeat);
         _numBuckets = GetBucketIndexFromBeat(mapMetadata.bpm, lastBeat)+1;
+        _data.bucketValues = new float[_numBuckets];
     }
 
     public abstract string GetAnalyticsName();
 
-    public abstract string GetAnalyticsData();
+    public string GetAnalyticsData()
+    {
+        return JsonUtility.ToJson(_data, prettyPrint: true);
+    }
 
     protected float GetBucketDurationInSeconds()
     {
@@ -51,6 +67,19 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
     protected int GetBucketCount()
     {
         return _numBuckets;
+    }
+
+    protected void SetOverallValue(float inOverallValue)
+    {
+        _data.overallValue = inOverallValue;
+    }
+
+    protected void SetBucketValue(int bucketIndex, float inBucketValue)
+    {
+        if (bucketIndex >= 0 && bucketIndex <= _data.bucketValues.Length)
+        {
+            _data.bucketValues[bucketIndex] = inBucketValue;
+        }
     }
 
 }
