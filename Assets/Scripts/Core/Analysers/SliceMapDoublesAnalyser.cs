@@ -2,31 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[System.Serializable]
-public struct SliceMapDoubleData
-{
-
-    public float beat;
-    public float leftAngle;
-    public int leftX;
-    public int leftY;
-    public int leftNoteCount;
-    public float rightAngle;
-    public int rightX;
-    public int rightY;
-    public int rightNoteCount;
-
-}
-
-[System.Serializable]
-public struct SliceMapDoubleAnalytics
-{
-    public float overallDoubleRatio;
-    public float[] doubleRatioBucketed;
-    public float bucketDurationInSeconds;
-    public List<SliceMapDoubleData> doublesFound;
-}
-
 public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
 {
 
@@ -37,7 +12,6 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
     }
 
     private SingleDoubleCounter[] _singlesDoublesBuckets;
-    private SliceMapDoubleAnalytics _analytics;
 
     enum HandMode
     {
@@ -47,8 +21,6 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
 
     public SliceMapDoublesAnalyser()
     {
-        _analytics = new SliceMapDoubleAnalytics();
-        _analytics.doublesFound = new List<SliceMapDoubleData>();
     }
 
     public override void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
@@ -56,12 +28,8 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
         base.ProcessSliceMaps(mapMetadata, leftHand, rightHand);
 
         float bpm = mapMetadata.bpm;
-        _analytics.doublesFound.Clear();
         int bucketCount = GetBucketCount();
-        _analytics.doubleRatioBucketed = new float[bucketCount];
         _singlesDoublesBuckets = new SingleDoubleCounter[bucketCount];
-        _analytics.overallDoubleRatio = 0.0f;
-        _analytics.bucketDurationInSeconds = GetBucketDurationInSeconds();
 
         HandMode currentHand = HandMode.Left;
         int leftSliceIndex = 0;
@@ -92,19 +60,7 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
             int bucketIndex = GetBucketIndexFromBeat(bpm, leftBeatCutData.sliceStartBeat);
             if (isDouble)
             {
-                SliceMapDoubleData newData = new SliceMapDoubleData();
-                newData.beat = leftBeatCutData.sliceStartBeat;
-                newData.leftAngle = leftBeatCutData.startPositioning.angle;
-                newData.leftX = leftBeatCutData.startPositioning.x;
-                newData.leftY = leftBeatCutData.startPositioning.y;
-                newData.leftNoteCount = leftBeatCutData.notesInCut.Count;
-                newData.rightAngle = rightBeatCutData.startPositioning.angle;
-                newData.rightX = rightBeatCutData.startPositioning.x;
-                newData.rightY = rightBeatCutData.startPositioning.y;
-                newData.rightNoteCount = rightBeatCutData.notesInCut.Count;
-                _analytics.doublesFound.Add(newData);
-
-                _singlesDoublesBuckets[bucketIndex].DoubleCount+=2;
+                _singlesDoublesBuckets[bucketIndex].DoubleCount++;
             }
             else
             {
@@ -137,33 +93,29 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
             }
         }
 
+        int totalDoubleCuts = 0;
         for (int index = 0; index < bucketCount; ++index)
         {
             int singleCount = _singlesDoublesBuckets[index].SingleCount;
             int doubleCount = _singlesDoublesBuckets[index].DoubleCount;
             if (singleCount == 0 && doubleCount == 0)
             {
-                _analytics.doubleRatioBucketed[index] = 0;
+                SetBucketValue(index, 0);
             }
             else
             {
                 float ratio = doubleCount / (1.0f * (singleCount + doubleCount));
-                _analytics.doubleRatioBucketed[index] = ratio;
+                SetBucketValue(index, ratio);
             }
+            totalDoubleCuts += doubleCount;
         }
 
         int totalCuts = leftSliceCount + rightSliceCount;
-        int totalDoubleCuts = _analytics.doublesFound.Count * 2;
-        _analytics.overallDoubleRatio = totalDoubleCuts / (1.0f * totalCuts);
+        SetOverallValue(totalDoubleCuts / (1.0f * totalCuts));
     }
 
     public override string GetAnalyticsName()
     {
         return "doubles";
-    }
-
-    public override string GetAnalyticsData()
-    {
-        return JsonUtility.ToJson(_analytics, prettyPrint: true);
     }
 }

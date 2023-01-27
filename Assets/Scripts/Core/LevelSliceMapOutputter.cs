@@ -30,7 +30,7 @@ public class LevelSliceMapOutputter
 
     public System.Guid RegisterAnalyser(ISliceMapAnalyser inAnalyser)
     {
-        System.Guid analyserID = new System.Guid();
+        System.Guid analyserID = System.Guid.NewGuid();
         _analysers.Add(analyserID, inAnalyser);
         return analyserID;
     }

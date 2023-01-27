@@ -24,8 +24,13 @@ public class LevelAudioLoader : MonoBehaviour
                 Debug.LogError(www.error);
             }
             else
+            if (www.result == UnityWebRequest.Result.Success)
             {
                 onLevelAudioLoadedCallback(DownloadHandlerAudioClip.GetContent(www));
+            }
+            else if (www.result != UnityWebRequest.Result.InProgress)
+            {
+                Debug.LogError(www.error);
             }
         }
     }
