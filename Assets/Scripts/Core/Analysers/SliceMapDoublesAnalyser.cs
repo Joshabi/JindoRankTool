@@ -60,7 +60,7 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
             int bucketIndex = GetBucketIndexFromBeat(bpm, leftBeatCutData.sliceStartBeat);
             if (isDouble)
             {
-                _singlesDoublesBuckets[bucketIndex].DoubleCount+=2;
+                _singlesDoublesBuckets[bucketIndex].DoubleCount++;
             }
             else
             {
