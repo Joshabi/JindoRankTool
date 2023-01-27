@@ -18,6 +18,12 @@ public class LevelAudioLoader : MonoBehaviour
         using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(filePath, AudioType.OGGVORBIS))
         {
             yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
+            {
+                Debug.LogError(www.error);
+            }
+            else
             if (www.result == UnityWebRequest.Result.Success)
             {
                 onLevelAudioLoadedCallback(DownloadHandlerAudioClip.GetContent(www));
