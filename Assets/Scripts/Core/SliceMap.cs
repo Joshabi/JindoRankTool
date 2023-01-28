@@ -215,11 +215,8 @@ public class SliceMap
             sData.sliceParity = Parity.Forehand;
             sData.sliceStartBeat = notesInSwing[0].b;
             sData.sliceEndBeat = notesInSwing[^1].b + 0.1f;
-
             sData.SetStartPosition(notesInSwing[0].x, notesInSwing[0].y);
-            sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
             sData.SetEndPosition(notesInSwing[^1].x, notesInSwing[^1].y);
-            sData.SetEndAngle(ForehandDict[notesInSwing[^1].d]);
 
             // If first swing, figure out starting orientation based on cut direction
             if (result.Count == 0) {
@@ -239,7 +236,11 @@ public class SliceMap
             ColourNote lastNote = lastSwing.notesInCut[^1];
 
             // Re-order the notesInCut in the event all the notes are dots and same snap
-            if (sData.notesInCut.Count > 1 && sData.notesInCut.All(x => x.d == 8)) sData.notesInCut = new(DotStackSort(lastSwing, sData.notesInCut));
+            if (sData.notesInCut.Count > 1 && sData.notesInCut.All(x => x.d == 8)) {
+                sData.notesInCut = new(DotStackSort(lastSwing, sData.notesInCut));
+                sData.SetStartPosition(notesInSwing[0].x, notesInSwing[0].y);
+                sData.SetEndPosition(notesInSwing[^1].x, notesInSwing[^1].y);
+            }
 
             // Get swing EBPM, if reset then double
             sData.swingEBPM = SwingEBPM(_BPM, currentNote.b - lastNote.b);
@@ -285,26 +286,31 @@ public class SliceMap
 
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, ref sData, bombsBetweenSwings, _playerXOffset, _rightHand);
 
-            // If backhand, readjust start and end angle
+            // Depending on parity, set angle
             if (sData.sliceParity == Parity.Backhand) {
                 sData.SetStartAngle(BackhandDict[notesInSwing[0].d]);
                 sData.SetEndAngle(BackhandDict[notesInSwing[^1].d]);
+            } else {
+                sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
+                sData.SetEndAngle(ForehandDict[notesInSwing[^1].d]);
             }
 
             // If parity is the same as before and not flagged as a bomb reset.
             // LATER: Add logic to determine if adding a swing or rolling is the better option.
             if (sData.sliceParity == lastSwing.sliceParity && sData.resetType != ResetType.Bomb) { sData.resetType = ResetType.Normal; }
 
-            // If current parity method thinks we are upside down, flip values.
-            if (_parityMethodology.UpsideDown == true)
+            // Perform dot checks depending on swing composition.
+            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
+            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
+
+            // If current parity method thinks we are upside down and not dot notes in next hit, flip values.
+            // This catch is in place to turn -180 into 180 (because the dictionary only has a definition from all the way around
+            // in one direction (which is -180)
+            if (_parityMethodology.UpsideDown == true && sData.notesInCut.All(x => x.d != 8))
             {
                 sData.SetStartAngle(sData.startPositioning.angle * -1);
                 sData.SetEndAngle(sData.endPositioning.angle * -1);
             }
-
-            // Perform dot checks depending on swing composition.
-            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
-            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
 
             // Add swing to list
             result.Add(sData);
@@ -312,7 +318,6 @@ public class SliceMap
         }
         // Add empty swings in for bomb avoidance.
         // Replace later with more advanced movement to avoid bombs in general.
-        Debug.Log("Right Hand: " + _rightHand + " | Resets: " + result.Count(x => x.resetType == ResetType.Normal));
         result = AddBombResetAvoidance(result);
         return result;
     }
