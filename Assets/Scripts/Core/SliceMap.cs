@@ -387,7 +387,6 @@ public class SliceMap
         return;
     }
 
-
     // Attempts to add bomb avoidance based on the isReset tag for a list of swings.
     // NOTE: To improve this, probably want bomb detection in its own function and these swings
     // would be added for each bomb in the sabers path rather then only for bomb resets.
