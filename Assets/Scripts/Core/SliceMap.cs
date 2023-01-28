@@ -66,22 +66,47 @@ public class SliceMap
 
     // LEFT HAND PARITY DICTIONARIES
     // Cut Direction -> Angle from Neutral (up down 0 degrees) given a Forehand Swing
-    public static readonly Dictionary<int, float> leftForehandDict = new Dictionary<int, float>()
+    private static readonly Dictionary<int, float> leftForehandDict = new Dictionary<int, float>()
     { { 0, -180 }, { 1, 0 }, { 2, 90 }, { 3, -90 }, { 4, 135 }, { 5, -135 }, { 6, 45 }, { 7, -45 }, { 8, 0 } };
     // Cut Direction -> Angle from Neutral (up down 0 degrees) given a Backhand Swing
-    public static readonly Dictionary<int, float> leftBackhandDict = new Dictionary<int, float>()
+    private static readonly Dictionary<int, float> leftBackhandDict = new Dictionary<int, float>()
     { { 0, 0 }, { 1, -180 }, { 2, -90 }, { 3, 90 }, { 4, -45 }, { 5, 45 }, { 6, -135 }, { 7, 135 }, { 8, 0 } };
 
     public static readonly Dictionary<int, int> opposingCutDict = new Dictionary<int, int>()
     { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
 
-    public static readonly List<int> forehandResetDict = new List<int>()
+    private static readonly List<int> forehandResetDict = new List<int>()
     { 1, 2, 3, 6, 7 };
-    public static readonly List<int> backhandResetDict = new List<int>()
+    private static readonly List<int> backhandResetDict = new List<int>()
     { 0, 4, 5 };
 
     public static Dictionary<int, float> ForehandDict { get { return (_rightHand) ? rightForehandDict : leftForehandDict; } }
     public static Dictionary<int, float> BackhandDict { get { return (_rightHand) ? rightBackhandDict : leftBackhandDict; } }
+
+    // Contains a list of directional vecotrs
+    public static readonly Vector2[] directionalVectors =
+{
+        new Vector2(0, 1),   // up
+        new Vector2(0, -1),  // down
+        new Vector2(-1, 0),  // left
+        new Vector2(1, 0),   // right
+        new Vector2(1, 1).normalized,   // up right
+        new Vector2(-1, 1).normalized,  // up left
+        new Vector2(-1, -1).normalized, // down left
+        new Vector2(1, -1).normalized   // down right
+    };
+
+    private static readonly Dictionary<Vector2, int> directionalVectorToCutDirection = new Dictionary<Vector2, int>()
+    {
+            { new Vector2(0, 1), 0 },
+            { new Vector2(0, -1), 1 },
+            { new Vector2(-1, 0), 2 },
+            { new Vector2(1, 0), 3 },
+            { new Vector2(1, 1), 5 },
+            { new Vector2(-1, 1), 4 },
+            { new Vector2(-1, -1), 6 },
+            { new Vector2(1, -1), 7 }
+    };
 
     #endregion
 
@@ -241,9 +266,6 @@ public class SliceMap
                 sData = DotChecks(sData, result[^1]);
             }
 
-            // If dot, re-orientate
-            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) sData = FixDotOrientation(lastSwing, sData);
-
             // If parity is the same as before and not flagged as a bomb reset.
             // LATER: Add logic to determine if adding a swing or rolling is the better option.
             if (sData.sliceParity == lastSwing.sliceParity && sData.resetType != ResetType.Bomb) { sData.resetType = ResetType.Normal; }
@@ -254,6 +276,9 @@ public class SliceMap
                 sData.SetStartAngle(sData.startPositioning.angle * -1);
                 sData.SetEndAngle(sData.endPositioning.angle * -1);
             }
+
+            // If dot, re-orientate
+            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) FixDotOrientation(lastSwing, ref sData);
 
             // Add swing to list
             result.Add(sData);
@@ -320,56 +345,46 @@ public class SliceMap
                 // Set ending angle equal to starting angle
                 currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
             }
-        } else if (currentSwing.notesInCut[0].d == 8 && currentSwing.notesInCut[^1].d != 8) {
-            // In the event its a dot then an arrow
-            currentSwing.SetEndAngle(AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity));
-            currentSwing.SetStartAngle(AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]));
-        } else if (currentSwing.notesInCut[0].d != 8 && currentSwing.notesInCut[^1].d == 8) {
-            currentSwing.SetStartAngle(AngleGivenCutDirection(currentSwing.notesInCut[0].d, currentSwing.sliceParity));
-            currentSwing.SetEndAngle(AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]));
-        }
+        } 
         // Not sure why, but this fixes the right hand on dot stacks and apparently doesn't need to be done to left?
         if (currentSwing.startPositioning.angle == 180 && _rightHand) currentSwing.SetStartAngle(currentSwing.startPositioning.angle = 0);
         return currentSwing;
     }
 
     // Attempts to fix the orientation in which a dot note is swung based on prior and post dot swings
-    private BeatCutData FixDotOrientation(BeatCutData lastSwing, BeatCutData currentSwing)
+    private void FixDotOrientation(BeatCutData lastSwing, ref BeatCutData currentSwing)
     {
-        // Get the previous and current notes
-        ColourNote lastNote = lastSwing.notesInCut[lastSwing.notesInCut.Count - 1];
-        ColourNote currentNote = currentSwing.notesInCut[0];
+        ColourNote dotNote = currentSwing.notesInCut.OrderBy(x => x.b).FirstOrDefault();
+        ColourNote lastNote = lastSwing.notesInCut[^1];
 
-        if (lastNote.d != 8)
-        {
-            currentSwing.SetStartAngle((currentSwing.sliceParity == Parity.Forehand) ?
-                AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Forehand) :
-                AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Backhand));
-            currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
+        Vector2 dir = (new Vector2(dotNote.x, dotNote.y) - new Vector2(lastNote.x, lastNote.y)).normalized;
+        Vector2 lowestDotProduct = directionalVectors.OrderBy(v => Vector2.Dot(dir, v)).First();
+        Vector2 cutDirection = new Vector2(Mathf.Round(lowestDotProduct.x), Mathf.Round(lowestDotProduct.y));
+        int orientation = directionalVectorToCutDirection[cutDirection];
+
+        if (dotNote.x == lastNote.x && dotNote.y == lastNote.y) {
+            orientation = opposingCutDict[orientation];
         }
-        else
-        {
-            // If the notes are on the same layer, generate the angle based on the end and starting hand positions
-            Vector2 lastHandCoords = new Vector2(lastSwing.endPositioning.x, lastSwing.endPositioning.y);
-            Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
-            float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
 
-            // Correct the angle for backhand hits
-            if (currentSwing.sliceParity == Parity.Backhand)
-            {
-                if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
-            }
+        float angle = (lastSwing.sliceParity == Parity.Backhand) ?
+            BackhandDict[orientation] :
+            ForehandDict[orientation];
 
-            // Flip for left hand
-            if (!_rightHand) angle *= -1;
+        if (lastSwing.endPositioning.angle == 0 && angle == -180) angle = 0;
 
-            angle = Mathf.Clamp(angle, -90, 90);
-            if (currentNote.y != lastNote.y) angle = Mathf.Clamp(angle, -45, 45);
+        // Checks for clamping on top and bottom row
+        float xDiff = Mathf.Abs(dotNote.x - lastNote.x);
+        if (xDiff < 3 && (dotNote.y == 2 || dotNote.y == 0)) angle = Mathf.Clamp(angle, -45, 45);
+        if (xDiff < 3 && (lastNote.y == 2)) angle = Mathf.Clamp(angle, -90, 90);
 
-            currentSwing.SetStartAngle(angle);
-            currentSwing.SetEndAngle(angle);
-        }
-        return currentSwing;
+        // Clamps inwards backhand hits if the note is only 1 away
+        if (xDiff == 1 && lastNote.x > dotNote.x && _rightHand && currentSwing.sliceParity == Parity.Backhand) angle = 0;
+        else if (xDiff == 1 && lastNote.x < dotNote.x && !_rightHand && currentSwing.sliceParity == Parity.Backhand) angle = 0;
+
+        currentSwing.SetStartAngle(angle);
+        currentSwing.SetEndAngle(angle);
+
+        return;
     }
 
 
