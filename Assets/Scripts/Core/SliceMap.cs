@@ -360,10 +360,7 @@ public class SliceMap
         ColourNote firstNote = currentSwing.notesInCut[0];
         ColourNote lastNote = currentSwing.notesInCut[^1];
 
-        Vector2 dir = (new Vector2(lastNote.x, lastNote.y) - new Vector2(firstNote.x, firstNote.y)).normalized;
-        Vector2 lowestDotProduct = directionalVectors.OrderBy(v => Vector2.Dot(dir, v)).First();
-        Vector2 cutDirection = new Vector2(Mathf.Round(lowestDotProduct.x), Mathf.Round(lowestDotProduct.y));
-        int orientation = directionalVectorToCutDirection[cutDirection];
+        int orientation = CutDirFromNoteToNote(firstNote, lastNote);
 
         angle = (lastSwing.sliceParity == Parity.Backhand) ?
             ForehandDict[orientation] :
@@ -381,10 +378,7 @@ public class SliceMap
         ColourNote dotNote = currentSwing.notesInCut[0];
         ColourNote lastNote = lastSwing.notesInCut[^1];
 
-        Vector2 dir = (new Vector2(dotNote.x, dotNote.y) - new Vector2(lastNote.x, lastNote.y)).normalized;
-        Vector2 lowestDotProduct = directionalVectors.OrderBy(v => Vector2.Dot(dir, v)).First();
-        Vector2 cutDirection = new Vector2(Mathf.Round(lowestDotProduct.x), Mathf.Round(lowestDotProduct.y));
-        int orientation = directionalVectorToCutDirection[cutDirection];
+        int orientation = CutDirFromNoteToNote(lastNote, dotNote);
 
         if (dotNote.x == lastNote.x && dotNote.y == lastNote.y) {
             orientation = opposingCutDict[orientation];
@@ -465,6 +459,15 @@ public class SliceMap
     #endregion
 
     #region Helper Functions
+    // Given 2 notes, gets the cut direction of the 2nd note based on the direction from first to last
+    private int CutDirFromNoteToNote(ColourNote firstNote, ColourNote lastNote)
+    {
+        Vector2 dir = (new Vector2(lastNote.x, lastNote.y) - new Vector2(firstNote.x, firstNote.y)).normalized;
+        Vector2 lowestDotProduct = directionalVectors.OrderBy(v => Vector2.Dot(dir, v)).First();
+        Vector2 cutDirection = new Vector2(Mathf.Round(lowestDotProduct.x), Mathf.Round(lowestDotProduct.y));
+        int orientation = directionalVectorToCutDirection[cutDirection];
+        return orientation;
+    }
     // Given a cut direction ID, return angle from appropriate dictionary
     public static float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
