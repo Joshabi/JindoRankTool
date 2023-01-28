@@ -29,6 +29,8 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
     private Data _data;
     private float _bucketDurationInSeconds = 10.0f;
     private int _numBuckets = 0;
+    private float _currentMapBPM = 0.0f;
+    private float _currentMapDuration = 0.0f;
 
     public SliceMapBucketedAnalyser()
     {
@@ -39,17 +41,20 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
         _bucketDurationInSeconds = inBucketDurationInSeconds;
     }
 
-    public virtual void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public virtual void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
     {
         _data = new Data();
         _data.secondsPerBucket = _bucketDurationInSeconds;
+
+        _currentMapBPM = mapDatabase.GetMapBPM(mapMetadata.id);
+        _currentMapDuration = mapDatabase.GetMapDuration(mapMetadata.id);
 
         List<BeatCutData> leftCuts = new List<BeatCutData>();
         List<BeatCutData> rightCuts = new List<BeatCutData>();
         leftHand.WriteBeatCutDataToList(leftCuts);
         rightHand.WriteBeatCutDataToList(rightCuts);
         float lastBeat = Mathf.Max(leftCuts[leftCuts.Count - 1].sliceEndBeat, rightCuts[rightCuts.Count - 1].sliceEndBeat);
-        _numBuckets = GetBucketIndexFromBeat(mapMetadata.bpm, lastBeat)+1;
+        _numBuckets = GetBucketIndexFromBeat(lastBeat)+1;
         _data.bucketValues = new float[_numBuckets];
     }
 
@@ -62,14 +67,24 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
         return JsonUtility.ToJson(_data, prettyPrint: true);
     }
 
+    protected float GetCurrentMapBPM()
+    {
+        return _currentMapBPM;
+    }
+
+    protected float GetCurrentMapDuration()
+    {
+        return _currentMapDuration;
+    }
+
     protected float GetBucketDurationInSeconds()
     {
         return _bucketDurationInSeconds;
     }
 
-    protected int GetBucketIndexFromBeat(float bpm, float beat)
+    protected int GetBucketIndexFromBeat(float beat)
     {
-        float seconds = TimeUtils.BeatsToSeconds(bpm, beat);
+        float seconds = TimeUtils.BeatsToSeconds(_currentMapBPM, beat);
         int index = Mathf.FloorToInt(seconds / GetBucketDurationInSeconds());
         return index;
     }

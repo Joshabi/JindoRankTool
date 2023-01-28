@@ -20,11 +20,13 @@ public class LevelSliceMapOutputter
         public BeatmapStructure mapMetadata;
     }
 
-    Dictionary<System.Guid, ISliceMapAnalyser> _analysers;
+    private Dictionary<System.Guid, ISliceMapAnalyser> _analysers;
+    private MapDatabase _mapDatabase;
 
-    public LevelSliceMapOutputter()
+    public LevelSliceMapOutputter(MapDatabase inMapDatabase)
     {
         _analysers = new Dictionary<System.Guid, ISliceMapAnalyser>();
+        _mapDatabase = inMapDatabase;
     }
 
     public System.Guid RegisterAnalyser(ISliceMapAnalyser inAnalyser)
@@ -41,15 +43,16 @@ public class LevelSliceMapOutputter
 
     public void ProcessBeatmap(BeatmapData beatmapData)
     {
-        SliceMap rightHandSliceMap = new SliceMap(beatmapData.Metadata.bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: true);
-        SliceMap leftHandSliceMap = new SliceMap(beatmapData.Metadata.bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: false);
+        float bpm = _mapDatabase.GetMapBPM(beatmapData.Metadata.id);
+        SliceMap rightHandSliceMap = new SliceMap(bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: true);
+        SliceMap leftHandSliceMap = new SliceMap(bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: false);
 
         LevelSliceMapHeader header = new LevelSliceMapHeader();
         header.mapMetadata = beatmapData.Metadata;
         List<LevelSliceMapAnalyticsObject> analytics = new List<LevelSliceMapAnalyticsObject>();
         foreach (ISliceMapAnalyser analyser in _analysers.Values)
         {
-            analyser.ProcessSliceMaps(beatmapData.Metadata, leftHandSliceMap, rightHandSliceMap);
+            analyser.ProcessSliceMaps(_mapDatabase, beatmapData.Metadata, leftHandSliceMap, rightHandSliceMap);
 
             LevelSliceMapAnalyticsObject analyserObject = new LevelSliceMapAnalyticsObject();
             analyserObject.name = analyser.GetAnalyticsName();

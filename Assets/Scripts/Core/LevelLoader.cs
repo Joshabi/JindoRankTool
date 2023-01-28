@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 public class LevelLoader
 {
 
-    public delegate void LevelLoadEvent(BeatmapData beatmapData);
+    public delegate void LevelLoadEvent(string levelFolder, LevelStructure levelStructure, BeatmapData beatmapData);
 
     public void LoadLevel(string levelFolder, LevelLoadEvent onLevelLoadCallback)
     {
@@ -72,14 +72,13 @@ public class LevelLoader
         }
         BeatmapData beatmap = new BeatmapData();
         beatmap.Metadata = difficulty;
-        beatmap.Metadata.bpm = loadedLevel._beatsPerMinute;
         beatmap.Metadata.mapName = SanitizeFilename(loadedLevel._songName);
         beatmap.Metadata.songFilename = loadedLevel._songFilename;
         beatmap.BeatData = beatDataV3;
 
         if (onLevelLoadCallback != null)
         {
-            onLevelLoadCallback(beatmap);
+            onLevelLoadCallback(levelFolder, loadedLevel, beatmap);
         }
     }
 

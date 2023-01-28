@@ -118,9 +118,10 @@ public struct BeatmapStructure
     public float _noteJumpMovementSpeed;
     public float _noteJumpStartBeatOffset;
     public object _customData;
-    public float bpm;
+    public string hash;
     public string mapName;
     public string songFilename;
+    public MapId id;
 }
 
 [System.Serializable]

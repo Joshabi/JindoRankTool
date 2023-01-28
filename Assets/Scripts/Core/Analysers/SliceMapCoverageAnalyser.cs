@@ -97,52 +97,20 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
         return inBlockCounts.FrequencyMap.Keys.Count;
     }
 
-    private void CountBlocksInSliceMap(float bpm, SliceMap inSliceMap, List<BlockFrequencyAccGrid> bucketsForCoverageCounting)
+    public override void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
     {
-        int numCuts = inSliceMap.GetSliceCount();
-        int cutIndex = 0;
-        while (cutIndex < numCuts)
-        {
-            BeatCutData cut = inSliceMap.GetBeatCutData(cutIndex);
-            if (cut.notesInCut != null)
-            {
-                foreach (ColourNote note in cut.notesInCut)
-                {
-                    if (note.c > 1)
-                    {
-                        continue;
-                    }
-                    int bucketIndex = GetBucketIndexFromBeat(bpm, note.b);
-                    AccGridPosition position = new AccGridPosition(note);
-                    if (!bucketsForCoverageCounting[bucketIndex].FrequencyMap.ContainsKey(position))
-                    {
-                        bucketsForCoverageCounting[bucketIndex].FrequencyMap.Add(position, 1);
-                    }
-                    else
-                    {
-                        bucketsForCoverageCounting[bucketIndex].FrequencyMap[position]++;
-                    }
-                }
-            }
-            ++cutIndex;
-        }
-    }
-
-    public override void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
-    {
-        base.ProcessSliceMaps(mapMetadata, leftHand, rightHand);
+        base.ProcessSliceMaps(mapDatabase, mapMetadata, leftHand, rightHand);
 
         List<BlockFrequencyAccGrid> bucketsForCoverageCounting = new List<BlockFrequencyAccGrid>();
 
-        float bpm = mapMetadata.bpm;
         int bucketCount = GetBucketCount();
         for (int bucketIndex = 0; bucketIndex < bucketCount; ++bucketIndex)
         {
             bucketsForCoverageCounting.Add(new BlockFrequencyAccGrid());
         }
 
-        CountBlocksInSliceMap(bpm, leftHand, bucketsForCoverageCounting);
-        CountBlocksInSliceMap(bpm, rightHand, bucketsForCoverageCounting);
+        CountBlocksInSliceMap(leftHand, bucketsForCoverageCounting);
+        CountBlocksInSliceMap(rightHand, bucketsForCoverageCounting);
 
         for (int bucketIndex = 0; bucketIndex < bucketCount; ++bucketIndex)
         {
@@ -159,5 +127,36 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
     public override string GetAnalyticsDescription()
     {
         return "Returns a percentage denoting how much of the acc grid is covered by unique configurations of notes. 0 = empty acc grid, 1 = every possible direction and colour occupies every space on the grid. Higher values are indicative of more variety in patterns.";
+    }
+
+    private void CountBlocksInSliceMap(SliceMap inSliceMap, List<BlockFrequencyAccGrid> bucketsForCoverageCounting)
+    {
+        int numCuts = inSliceMap.GetSliceCount();
+        int cutIndex = 0;
+        while (cutIndex < numCuts)
+        {
+            BeatCutData cut = inSliceMap.GetBeatCutData(cutIndex);
+            if (cut.notesInCut != null)
+            {
+                foreach (ColourNote note in cut.notesInCut)
+                {
+                    if (note.c > 1)
+                    {
+                        continue;
+                    }
+                    int bucketIndex = GetBucketIndexFromBeat(note.b);
+                    AccGridPosition position = new AccGridPosition(note);
+                    if (!bucketsForCoverageCounting[bucketIndex].FrequencyMap.ContainsKey(position))
+                    {
+                        bucketsForCoverageCounting[bucketIndex].FrequencyMap.Add(position, 1);
+                    }
+                    else
+                    {
+                        bucketsForCoverageCounting[bucketIndex].FrequencyMap[position]++;
+                    }
+                }
+            }
+            ++cutIndex;
+        }
     }
 }

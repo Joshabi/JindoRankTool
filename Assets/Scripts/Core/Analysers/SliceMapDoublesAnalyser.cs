@@ -21,11 +21,10 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
     {
     }
 
-    public override void ProcessSliceMaps(BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public override void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
     {
-        base.ProcessSliceMaps(mapMetadata, leftHand, rightHand);
+        base.ProcessSliceMaps(mapDatabase, mapMetadata, leftHand, rightHand);
 
-        float bpm = mapMetadata.bpm;
         int bucketCount = GetBucketCount();
         SingleDoubleCounter[] singlesDoublesBuckets = new SingleDoubleCounter[bucketCount];
 
@@ -55,39 +54,41 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
                 currentHand = HandMode.Left;
             }
 
-            int bucketIndex = GetBucketIndexFromBeat(bpm, leftBeatCutData.sliceStartBeat);
+            int bucketIndex = GetBucketIndexFromBeat(leftBeatCutData.sliceStartBeat);
             if (isDouble)
             {
                 singlesDoublesBuckets[bucketIndex].DoubleCount++;
+                ++leftSliceIndex;
+                ++rightSliceIndex;
             }
             else
             {
                 singlesDoublesBuckets[bucketIndex].SingleCount++;
+                if (currentHand == HandMode.Left)
+                {
+                    ++leftSliceIndex;
+                    if (leftSliceIndex >= leftSliceCount)
+                    {
+                        currentHand = HandMode.Right;
+                    }
+                }
+                else
+                {
+                    ++rightSliceIndex;
+                    if (rightSliceIndex >= rightSliceCount)
+                    {
+                        currentHand = HandMode.Left;
+                    }
+                }
             }
 
-            if (currentHand == HandMode.Left)
+            if (rightSliceIndex < rightSliceCount)
             {
-                ++leftSliceIndex;
-                if (leftSliceIndex < leftSliceCount)
-                {
-                    leftBeatCutData = leftHand.GetBeatCutData(leftSliceIndex);
-                }
-                else
-                {
-                    currentHand = HandMode.Right;
-                }
+                rightBeatCutData = rightHand.GetBeatCutData(rightSliceIndex);
             }
-            else
+            if (leftSliceIndex < leftSliceCount)
             {
-                ++rightSliceIndex;
-                if (rightSliceIndex < rightSliceCount)
-                {
-                    rightBeatCutData = rightHand.GetBeatCutData(rightSliceIndex);
-                }
-                else
-                {
-                    currentHand = HandMode.Left;
-                }
+                leftBeatCutData = leftHand.GetBeatCutData(leftSliceIndex);
             }
         }
 

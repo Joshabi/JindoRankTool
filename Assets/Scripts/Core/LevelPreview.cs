@@ -117,23 +117,13 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         return _isPreviewing;
     }
 
-    public void PreviewMap(string mapDirectory, BeatmapDifficultyRank preferredDifficulty)
+    public void PreviewMap(string levelFolder, LevelStructure loadedLevel, BeatmapData beatmapData)
     {
-        _desiredDifficulty = preferredDifficulty;
-        _currentMapDirectory = mapDirectory;
-        LevelLoader levelLoader = new LevelLoader();
-        levelLoader.LoadLevel(mapDirectory, OnLevelLoaded);
-    }
-
-    private void OnLevelLoaded(BeatmapData beatmapData)
-    {
-        if (beatmapData.Metadata._difficultyRank == _desiredDifficulty)
-        {
-            _BPM = beatmapData.Metadata.bpm;
-            _beatmap = beatmapData;
-            _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
-            _levelAudioLoader.LoadSong(_currentMapDirectory + "/" + beatmapData.Metadata.songFilename, OnLevelAudioLoaded);
-        }
+        _BPM = loadedLevel._beatsPerMinute;
+        _beatmap = beatmapData;
+        _currentMapDirectory = levelFolder;
+        _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
+        _levelAudioLoader.LoadSong(_currentMapDirectory + "/" + beatmapData.Metadata.songFilename, OnLevelAudioLoaded);
     }
 
     private void OnLevelAudioLoaded(AudioClip audio)
