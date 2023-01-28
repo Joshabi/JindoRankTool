@@ -22,8 +22,10 @@ public class JindoRankTool : MonoBehaviour
     private LevelLoader _levelLoader;
     private LevelDownloader _levelDownloader;
     private LevelSliceMapOutputter _sliceMapOutputter;
+
     private System.Guid _doublesAnalyserID;
     private System.Guid _coverageAnalyserID;
+    private System.Guid _spsAnalyserID;
 
     private void Awake()
     {
@@ -33,6 +35,7 @@ public class JindoRankTool : MonoBehaviour
         _sliceMapOutputter = new LevelSliceMapOutputter(_mapDatabase);
         _doublesAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapDoublesAnalyser());
         _coverageAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapCoverageAnalyser());
+        _spsAnalyserID = _sliceMapOutputter.RegisterAnalyser(new SliceMapSPSAnalyser());
 
         if (_previewMap)
         {
@@ -129,6 +132,7 @@ public class JindoRankTool : MonoBehaviour
     {
         _sliceMapOutputter.UnregisterAnalyser(_doublesAnalyserID);
         _sliceMapOutputter.UnregisterAnalyser(_coverageAnalyserID);
+        _sliceMapOutputter.UnregisterAnalyser(_spsAnalyserID);
     }
 
     private void _levelLoader_OnLevelLoaded(string levelFolder, LevelStructure loadedLevel, BeatmapData beatmapData)
