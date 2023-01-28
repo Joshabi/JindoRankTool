@@ -341,15 +341,13 @@ public class SliceMap
         Vector2 ATB = noteBPos - noteAPos;
 
         // Incase the last note was a dot, turn the swing angle into the closest cut direction based on last swing parity
-        int lastNoteClosestCutDir = (lastSwing.sliceParity == Parity.Forehand) ?
-                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastSwing.startPositioning.angle / 45.0) * 45).Key :
-                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastSwing.startPositioning.angle / 45.0) * 45).Key;
+        int lastNoteClosestCutDir = ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastSwing.startPositioning.angle / 45.0) * 45).Key;
 
         // Convert the cut direction to a directional vector then do the dot product between noteA to noteB and last swing direction
-        Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == lastNoteClosestCutDir).Key;
-        if (Vector2.Dot(noteACutVector, ATB) < 0)
-        {
-            ATB = -ATB;   // B before A
+        Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == opposingCutDict[lastNoteClosestCutDir]).Key;
+
+        if (Vector2.Dot(noteACutVector, ATB) < 0) {
+            ATB = -ATB;
         }
 
         // Sort the cubes according to their position along the direction vector
@@ -367,11 +365,14 @@ public class SliceMap
 
         int orientation = CutDirFromNoteToNote(firstNote, lastNote);
 
-        angle = (lastSwing.sliceParity == Parity.Backhand) ?
-            ForehandDict[orientation] :
-            BackhandDict[orientation];
+        // Okay so originally i was using the dictionary corrosponding to parity,
+        // but that just caused issues and I gave up so I put in some catches below to
+        // stop it having a fit.
+        angle = ForehandDict[orientation];
 
-        if (lastSwing.endPositioning.angle == 0 && angle == -180) angle = 0;
+        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == -90 && currentSwing.sliceParity == Parity.Forehand) angle *= -1;
+        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == 90 && currentSwing.sliceParity == Parity.Backhand) angle *= -1;
+        if (angle == -180 || angle == 180) angle = 0;
 
         currentSwing.SetStartAngle(angle);
         currentSwing.SetEndAngle(angle);
@@ -477,13 +478,6 @@ public class SliceMap
     public static float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
         return (parity == Parity.Forehand) ? ForehandDict[cutDirection] : BackhandDict[cutDirection];
-    }
-    // Returns the angle between any 2 given notes
-    private float AngleBetweenNotes(ColourNote firstNote, ColourNote lastNote) {
-        Vector3 firstNoteCoords = new Vector3(firstNote.x, firstNote.y, 0);
-        Vector3 lastNoteCoords = new Vector3 (lastNote.x, lastNote.y, 0);
-        float angle = Vector3.SignedAngle(Vector3.up, lastNoteCoords - firstNoteCoords, Vector3.forward);
-        return angle;
     }
     // Determines if a Note is inverted
     private bool IsInvert(ColourNote lastNote, ColourNote nextNote)
