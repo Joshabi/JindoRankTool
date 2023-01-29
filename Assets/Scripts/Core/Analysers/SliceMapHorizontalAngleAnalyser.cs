@@ -18,7 +18,7 @@ public class SliceMapHorizontalAngleAnalyser : SliceMapSeparateHandAnalyser
 
     public override string GetAnalyticsName()
     {
-        return "angularVariance";
+        return "horizontalAngleRatio";
     }
 
     protected override void ProcessHand(SliceMap hand, bool isLeftHand)
