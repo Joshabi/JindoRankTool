@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser
+public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser<float>
 {
 
     struct SingleDoubleCounter

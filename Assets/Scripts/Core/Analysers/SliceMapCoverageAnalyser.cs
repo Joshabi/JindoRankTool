@@ -9,7 +9,7 @@ using UnityEngine;
  * Provides a coverage factor for a pair of slice maps, where 0 = no blocks, and 1 = every possible position, direction, colour
  * on the acc grid is occupied.
  */
-public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser
+public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser<float>
 {
 
     [DebuggerDisplay("x = {x}, y = {y}, c = {c}, d = {d}")]

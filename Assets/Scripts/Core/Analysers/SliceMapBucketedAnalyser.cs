@@ -15,14 +15,14 @@ using UnityEngine;
  * 
  * TODO: Probably turn this in to a generic class where T controls the type of overallValue and bucketValues.
  */
-public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
+public abstract class SliceMapBucketedAnalyser<DataType> : ISliceMapAnalyser
 {
 
     [System.Serializable]
     protected struct Data
     {
-        public float overallValue;
-        public float[] bucketValues;
+        public DataType overallValue;
+        public DataType[] bucketValues;
         public float secondsPerBucket;
     }
 
@@ -55,7 +55,7 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
         rightHand.WriteBeatCutDataToList(rightCuts);
         float lastBeat = Mathf.Max(leftCuts[leftCuts.Count - 1].sliceEndBeat, rightCuts[rightCuts.Count - 1].sliceEndBeat);
         _numBuckets = GetBucketIndexFromBeat(lastBeat)+1;
-        _data.bucketValues = new float[_numBuckets];
+        _data.bucketValues = new DataType[_numBuckets];
     }
 
     public abstract string GetAnalyticsName();
@@ -97,20 +97,41 @@ public abstract class SliceMapBucketedAnalyser : ISliceMapAnalyser
     /**
      * Set the overall value of this analyser's output.
      */
-    protected void SetOverallValue(float inOverallValue)
+    protected void SetOverallValue(DataType inOverallValue)
     {
         _data.overallValue = inOverallValue;
     }
 
     /**
+     * Get the overall value of this analyser's output.
+     */
+    protected DataType GetOverallValue()
+    {
+        return _data.overallValue;
+    }
+
+    /**
      * Set the value of the bucket at the given index.
      */
-    protected void SetBucketValue(int bucketIndex, float inBucketValue)
+    protected void SetBucketValue(int bucketIndex, DataType inBucketValue)
     {
         if (bucketIndex >= 0 && bucketIndex <= _data.bucketValues.Length)
         {
             _data.bucketValues[bucketIndex] = inBucketValue;
         }
+    }
+
+    /**
+     * Get the value of the bucket at the given index.
+     */
+    protected DataType GetBucketValue(int bucketIndex)
+    {
+        if (bucketIndex >= 0 && bucketIndex <= _data.bucketValues.Length)
+        {
+            return _data.bucketValues[bucketIndex];
+        }
+
+        return default(DataType);
     }
 
 }
