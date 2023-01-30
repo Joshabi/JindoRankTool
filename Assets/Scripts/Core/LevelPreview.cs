@@ -22,6 +22,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     [SerializeField] private BeatmapData _beatmap;
     [SerializeField] private BeatCubeObject _cubePrefab;
     [SerializeField] private SaberController _saberPrefab;
+    [SerializeField] private GameObject _wallPrefab;
     [SerializeField] private GameObject _bombPrefab;
     [SerializeField] private float _speed = 100.0f;
     [SerializeField] private Color _leftColour;
@@ -46,6 +47,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     private List<Obstacle> _obstacles = new List<Obstacle>();
     private int _blockIndex = 0;
     private int _bombIndex = 0;
+    private int _obstaclesIndex = 0;
 
     private SaberController _leftSaber;
     private SaberController _rightSaber;
@@ -73,6 +75,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _timeToReachSabers = Mathf.Abs((Mathf.Abs(_saberZ)-3.0f) / _speed);
         _blocks = new List<ColourNote>();
         _bombs = new List<BombNote>();
+        _obstacles = new List<Obstacle>();
         _goInstances = new List<GameObject>();
         _leftSaber = GameObject.Instantiate<SaberController>(_saberPrefab);
         _leftSaber.transform.position = Vector3.zero;
@@ -162,6 +165,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
         _blocks.Clear();
         _bombs.Clear();
+        _obstacles.Clear();
         _startBeatOffset = 2.0f;
         foreach (ColourNote block in _beatmap.BeatData.colorNotes)
         {
@@ -239,6 +243,18 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
                 }
             }
         }
+        if (_obstaclesIndex < _obstacles.Count)
+        {
+            while (_beatTime > _obstacles[_obstaclesIndex].b - _startBeatOffset)
+            {
+                Obstacle wall = _obstacles[_obstaclesIndex];
+                SpawnWall(wall.x, wall.y, wall.w, wall.h, wall.d);
+                ++_obstaclesIndex;
+                if (_obstaclesIndex >= _obstacles.Count) { break; }
+            }
+        }
+
+
         if (_leftSliceIndex < _sliceMapLeft.GetSliceCount())
         {
             BeatCutData cutData = _sliceMapLeft.GetBeatCutData(_leftSliceIndex);
@@ -336,7 +352,9 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
     public void SpawnWall(int x, int y, int w, int h, int d)
     {
-
+        BeatWallObject wall = GameObject.Instantiate(_wallPrefab).GetComponent<BeatWallObject>();
+        wall.Init(x, y, w, h, d, _speed, this);
+        _goInstances.Add(wall.gameObject);
     }
 
     public void SetTime(float t)
@@ -374,6 +392,18 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         if (_bombIndex == 0)
         {
             _bombIndex = _bombs.Count;
+        }
+        for (int i = 0; i < _obstacles.Count; ++i)
+        {
+            if (_obstacles[i].b > _beatTime)
+            {
+                _obstaclesIndex = i;
+                break;
+            }
+        }
+        if (_obstaclesIndex == 0)
+        {
+            _obstaclesIndex = _bombs.Count;
         }
 
         int numLeftCutData = _sliceMapLeft.GetSliceCount();

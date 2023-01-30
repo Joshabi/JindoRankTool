@@ -66,22 +66,47 @@ public class SliceMap
 
     // LEFT HAND PARITY DICTIONARIES
     // Cut Direction -> Angle from Neutral (up down 0 degrees) given a Forehand Swing
-    public static readonly Dictionary<int, float> leftForehandDict = new Dictionary<int, float>()
+    private static readonly Dictionary<int, float> leftForehandDict = new Dictionary<int, float>()
     { { 0, -180 }, { 1, 0 }, { 2, 90 }, { 3, -90 }, { 4, 135 }, { 5, -135 }, { 6, 45 }, { 7, -45 }, { 8, 0 } };
     // Cut Direction -> Angle from Neutral (up down 0 degrees) given a Backhand Swing
-    public static readonly Dictionary<int, float> leftBackhandDict = new Dictionary<int, float>()
+    private static readonly Dictionary<int, float> leftBackhandDict = new Dictionary<int, float>()
     { { 0, 0 }, { 1, -180 }, { 2, -90 }, { 3, 90 }, { 4, -45 }, { 5, 45 }, { 6, -135 }, { 7, 135 }, { 8, 0 } };
 
     public static readonly Dictionary<int, int> opposingCutDict = new Dictionary<int, int>()
     { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
 
-    public static readonly List<int> forehandResetDict = new List<int>()
+    private static readonly List<int> forehandResetDict = new List<int>()
     { 1, 2, 3, 6, 7 };
-    public static readonly List<int> backhandResetDict = new List<int>()
+    private static readonly List<int> backhandResetDict = new List<int>()
     { 0, 4, 5 };
 
     public static Dictionary<int, float> ForehandDict { get { return (_rightHand) ? rightForehandDict : leftForehandDict; } }
     public static Dictionary<int, float> BackhandDict { get { return (_rightHand) ? rightBackhandDict : leftBackhandDict; } }
+
+    // Contains a list of directional vecotrs
+    public static readonly Vector2[] directionalVectors =
+{
+        new Vector2(0, 1),   // up
+        new Vector2(0, -1),  // down
+        new Vector2(-1, 0),  // left
+        new Vector2(1, 0),   // right
+        new Vector2(1, 1).normalized,   // up right
+        new Vector2(-1, 1).normalized,  // up left
+        new Vector2(-1, -1).normalized, // down left
+        new Vector2(1, -1).normalized   // down right
+    };
+
+    private static readonly Dictionary<Vector2, int> directionalVectorToCutDirection = new Dictionary<Vector2, int>()
+    {
+            { new Vector2(0, 1), 0 },
+            { new Vector2(0, -1), 1 },
+            { new Vector2(-1, 0), 2 },
+            { new Vector2(1, 0), 3 },
+            { new Vector2(1, 1), 5 },
+            { new Vector2(-1, 1), 4 },
+            { new Vector2(-1, -1), 6 },
+            { new Vector2(1, -1), 7 }
+    };
 
     #endregion
 
@@ -157,6 +182,32 @@ public class SliceMap
                      Mathf.Abs(BackhandDict[currentNote.d] - BackhandDict[nextNote.d]) <= 45)
                     { continue; }
             }
+            
+            // Re-order the notesInCut in the event all the notes are on the same snap and not dots
+            if(notesInSwing.All(x => x.d != 8) && notesInSwing.Count > 1)
+            {
+                // Find the two notes that are furthest apart
+                var furthestNotes = (from c1 in notesInSwing
+                                     from c2 in notesInSwing
+                                     orderby Vector3.Distance(new Vector2(c1.x, c1.y), new Vector2(c2.x, c2.y)) descending
+                                     select new { c1, c2 }).First();
+
+                ColourNote noteA = furthestNotes.c1;
+                ColourNote noteB = furthestNotes.c2;
+                Vector2 noteAPos = new(noteA.x, noteA.y);
+                Vector2 noteBPos = new(noteB.x, noteB.y);
+
+                // Get the direction vector from noteA to noteB
+                Vector2 ATB = noteBPos - noteAPos;
+
+                Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == noteA.d).Key;
+                if (Vector2.Dot(noteACutVector, ATB) < 0) {
+                    ATB = -ATB;   // B before A
+                } 
+
+                // Sort the cubes according to their position along the direction vector
+                notesInSwing.Sort((a, b) => Vector2.Dot(new Vector2(a.x, a.y) - new Vector2(noteA.x, noteA.y), ATB).CompareTo(Vector2.Dot(new Vector2(b.x, b.y) - new Vector2(noteA.x, noteA.y), ATB)));
+            }
 
             // Assume by default swinging forehanded
             BeatCutData sData = new BeatCutData();
@@ -164,11 +215,8 @@ public class SliceMap
             sData.sliceParity = Parity.Forehand;
             sData.sliceStartBeat = notesInSwing[0].b;
             sData.sliceEndBeat = notesInSwing[^1].b + 0.1f;
-
             sData.SetStartPosition(notesInSwing[0].x, notesInSwing[0].y);
-            sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
             sData.SetEndPosition(notesInSwing[^1].x, notesInSwing[^1].y);
-            sData.SetEndAngle(ForehandDict[notesInSwing[^1].d]);
 
             // If first swing, figure out starting orientation based on cut direction
             if (result.Count == 0) {
@@ -187,8 +235,12 @@ public class SliceMap
             BeatCutData lastSwing = result[^1];
             ColourNote lastNote = lastSwing.notesInCut[^1];
 
-            // Performs Dot Checks under the assumption is a forehand swing
-            sData = DotChecks(sData, lastSwing);
+            // Re-order the notesInCut in the event all the notes are dots and same snap
+            if (sData.notesInCut.Count > 1 && sData.notesInCut.All(x => x.d == 8)) {
+                sData.notesInCut = new(DotStackSort(lastSwing, sData.notesInCut));
+                sData.SetStartPosition(notesInSwing[0].x, notesInSwing[0].y);
+                sData.SetEndPosition(notesInSwing[^1].x, notesInSwing[^1].y);
+            }
 
             // Get swing EBPM, if reset then double
             sData.swingEBPM = SwingEBPM(_BPM, currentNote.b - lastNote.b);
@@ -227,29 +279,40 @@ public class SliceMap
 
             // If time since dodged exceeds a set amount in seconds, undo dodge
             var undodgeCheckTime = 0.35f;
-            if (BeatToSeconds(_BPM, notesInSwing[^1].b - _lastWallTime) > undodgeCheckTime) { _playerXOffset = 0; }
+            if (TimeUtils.BeatsToSeconds(_BPM, notesInSwing[^1].b - _lastWallTime) > undodgeCheckTime) { _playerXOffset = 0; }
 
             // Work out Parity
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
 
+            // Perform dot checks depending on swing composition.
+            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
+            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
+
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, ref sData, bombsBetweenSwings, _playerXOffset, _rightHand);
 
-            // If backhand, readjust start and end angle
-            if (sData.sliceParity == Parity.Backhand) {
-                sData.SetStartAngle(BackhandDict[notesInSwing[0].d]);
-                sData.SetEndAngle(BackhandDict[notesInSwing[^1].d]);
-                sData = DotChecks(sData, result[^1]);
+            // Depending on parity, set angle
+            if (sData.notesInCut.Any(x => x.d != 8))
+            {
+                if (sData.sliceParity == Parity.Backhand)
+                {
+                    sData.SetStartAngle(BackhandDict[notesInSwing[0].d]);
+                    sData.SetEndAngle(BackhandDict[notesInSwing[^1].d]);
+                }
+                else
+                {
+                    sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
+                    sData.SetEndAngle(ForehandDict[notesInSwing[^1].d]);
+                }
             }
-
-            // If dot, re-orientate
-            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) sData = FixDotOrientation(lastSwing, sData);
 
             // If parity is the same as before and not flagged as a bomb reset.
             // LATER: Add logic to determine if adding a swing or rolling is the better option.
             if (sData.sliceParity == lastSwing.sliceParity && sData.resetType != ResetType.Bomb) { sData.resetType = ResetType.Normal; }
 
-            // If current parity method thinks we are upside down, flip values.
-            if (_parityMethodology.UpsideDown == true)
+            // If current parity method thinks we are upside down and not dot notes in next hit, flip values.
+            // This catch is in place to turn -180 into 180 (because the dictionary only has a definition from all the way around
+            // in one direction (which is -180)
+            if (_parityMethodology.UpsideDown == true && sData.notesInCut.All(x => x.d != 8))
             {
                 sData.SetStartAngle(sData.startPositioning.angle * -1);
                 sData.SetEndAngle(sData.endPositioning.angle * -1);
@@ -261,117 +324,98 @@ public class SliceMap
         }
         // Add empty swings in for bomb avoidance.
         // Replace later with more advanced movement to avoid bombs in general.
-        Debug.Log("Right Hand: " + _rightHand + " | Resets: " + result.Count(x => x.resetType == ResetType.Normal));
         result = AddBombResetAvoidance(result);
         return result;
     }
 
     #region Dots and Bombs Checks
+
+    private List<ColourNote> DotStackSort(BeatCutData lastSwing, List<ColourNote> nextNotes) {
+
+        // Find the two notes that are furthest apart
+        var furthestNotes = (from c1 in nextNotes
+                             from c2 in nextNotes
+                             orderby Vector3.Distance(new Vector2(c1.x, c1.y), new Vector2(c2.x, c2.y)) descending
+                             select new { c1, c2 }).First();
+
+        ColourNote noteA = furthestNotes.c1;
+        ColourNote noteB = furthestNotes.c2;
+        Vector2 noteAPos = new(noteA.x, noteA.y);
+        Vector2 noteBPos = new(noteB.x, noteB.y);
+
+        // Get the direction vector from noteA to noteB
+        Vector2 ATB = noteBPos - noteAPos;
+
+        // Incase the last note was a dot, turn the swing angle into the closest cut direction based on last swing parity
+        int lastNoteClosestCutDir = ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastSwing.startPositioning.angle / 45.0) * 45).Key;
+
+        // Convert the cut direction to a directional vector then do the dot product between noteA to noteB and last swing direction
+        Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == opposingCutDict[lastNoteClosestCutDir]).Key;
+
+        if (Vector2.Dot(noteACutVector, ATB) < 0) {
+            ATB = -ATB;
+        }
+
+        // Sort the cubes according to their position along the direction vector
+        nextNotes.Sort((a, b) => Vector2.Dot(new Vector2(a.x, a.y) - new Vector2(noteA.x, noteA.y), ATB).CompareTo(Vector2.Dot(new Vector2(b.x, b.y) - new Vector2(noteA.x, noteA.y), ATB)));
+        return nextNotes;
+    }
+
     // Modifies a Swing if Dot Notes are involved
-    public BeatCutData DotChecks(BeatCutData currentSwing, BeatCutData lastSwing)
+    private void CalculateDotStackSwingAngle(BeatCutData lastSwing, ref BeatCutData currentSwing)
     {
-        // If the entire swing is dots
-        if(currentSwing.notesInCut.All(x => x.d == 8))
-        {
-            // If there is more then 1 note, indicating a dot stack, tower, or zebra slider
-            if (currentSwing.notesInCut.Count > 1)
-            {
-                // Get the first and last note based on beats
-                float angle;
-                ColourNote firstNote = currentSwing.notesInCut.OrderBy(x => x.b).FirstOrDefault();
-                ColourNote lastNote = currentSwing.notesInCut.OrderBy(x => x.b).LastOrDefault();
-                float firstToLast = AngleBetweenNotes(firstNote, lastNote);
-                float lastToFirst = AngleBetweenNotes(lastNote, firstNote);
-                float currentAngle = lastSwing.endPositioning.angle;
+        // Get the first and last note based on beats
+        float angle;
+        ColourNote firstNote = currentSwing.notesInCut[0];
+        ColourNote lastNote = currentSwing.notesInCut[^1];
 
-                // Determine the angle change between current angle and next
-                float FTLChange = currentAngle - firstToLast;
-                float LTFChange = currentAngle - lastToFirst;
+        int orientation = CutDirFromNoteToNote(firstNote, lastNote);
 
-                // Depending on which is less change, set the angle.
-                // Need some decision making logic here if hitting it either way is the same rotation
-                if (Mathf.Abs(FTLChange) < Mathf.Abs(LTFChange)) { angle = firstToLast; } 
-                else if(Mathf.Abs(FTLChange) > Mathf.Abs(LTFChange)) { angle = lastToFirst; }
-                else
-                {
-                    // In the event the angle change is the same hitting either note first. Do some additional checks
-                    // based on the distance to the note
-                    Vector2 lastHitNotePosition = new(lastSwing.endPositioning.x, lastSwing.endPositioning.y);
-                    Vector2 firstNoteVec = new(firstNote.x, firstNote.y);
-                    Vector2 lastNoteVec = new(lastNote.x, lastNote.y);
+        // Okay so originally i was using the dictionary corrosponding to parity,
+        // but that just caused issues and I gave up so I put in some catches below to
+        // stop it having a fit.
+        angle = ForehandDict[orientation];
 
-                    float distToFirst = Vector2.Distance(firstNoteVec, lastHitNotePosition);
-                    float distToLast = Vector2.Distance(lastNoteVec, lastHitNotePosition);
+        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == -90 && lastSwing.sliceParity == Parity.Backhand) angle *= -1;
+        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == 90 && lastSwing.sliceParity == Parity.Forehand) angle *= -1;
+        if (angle == -180 || angle == 180) angle = 0;
 
-                    if (Mathf.Abs(distToFirst) < Mathf.Abs(distToLast)) { angle = firstToLast; }
-                    else { angle = lastToFirst; }
-
-                    // NOTE: I dont think it can be the same angle change and equal distance to the next note?
-                    // This should work.
-                }
-
-                // Configure the swing
-                currentSwing.SetStartAngle(angle);
-                currentSwing.sliceStartBeat = firstNote.b;
-                currentSwing.sliceEndBeat = lastNote.b + 0.1f;
-                currentSwing.SetStartPosition(firstNote.x, firstNote.y);
-                currentSwing.SetEndPosition(lastNote.x, lastNote.y);
-
-                // Set ending angle equal to starting angle
-                currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
-            }
-        } else if (currentSwing.notesInCut[0].d == 8 && currentSwing.notesInCut[^1].d != 8) {
-            // In the event its a dot then an arrow
-            currentSwing.SetEndAngle(AngleGivenCutDirection(currentSwing.notesInCut[^1].d, currentSwing.sliceParity));
-            currentSwing.SetStartAngle(AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]));
-        } else if (currentSwing.notesInCut[0].d != 8 && currentSwing.notesInCut[^1].d == 8) {
-            currentSwing.SetStartAngle(AngleGivenCutDirection(currentSwing.notesInCut[0].d, currentSwing.sliceParity));
-            currentSwing.SetEndAngle(AngleBetweenNotes(currentSwing.notesInCut[0], currentSwing.notesInCut[^1]));
-        }
-        // Not sure why, but this fixes the right hand on dot stacks and apparently doesn't need to be done to left?
-        if (currentSwing.startPositioning.angle == 180 && _rightHand) currentSwing.SetStartAngle(currentSwing.startPositioning.angle = 0);
-        return currentSwing;
+        currentSwing.SetStartAngle(angle);
+        currentSwing.SetEndAngle(angle);
     }
 
-    // Attempts to fix the orientation in which a dot note is swung based on prior and post dot swings
-    private BeatCutData FixDotOrientation(BeatCutData lastSwing, BeatCutData currentSwing)
+    // Calculates how a dot note should be swung according to the prior swing.
+    private void CalculateDotDirection(BeatCutData lastSwing, ref BeatCutData currentSwing)
     {
-        // Get the previous and current notes
-        ColourNote lastNote = lastSwing.notesInCut[lastSwing.notesInCut.Count - 1];
-        ColourNote currentNote = currentSwing.notesInCut[0];
+        ColourNote dotNote = currentSwing.notesInCut[0];
+        ColourNote lastNote = lastSwing.notesInCut[^1];
 
-        if (lastNote.d != 8)
-        {
-            currentSwing.SetStartAngle((currentSwing.sliceParity == Parity.Forehand) ?
-                AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Forehand) :
-                AngleGivenCutDirection(opposingCutDict[lastNote.d], Parity.Backhand));
-            currentSwing.SetEndAngle(currentSwing.startPositioning.angle);
+        int orientation = CutDirFromNoteToNote(lastNote, dotNote);
+
+        if (dotNote.x == lastNote.x && dotNote.y == lastNote.y) {
+            orientation = opposingCutDict[orientation];
         }
-        else
-        {
-            // If the notes are on the same layer, generate the angle based on the end and starting hand positions
-            Vector2 lastHandCoords = new Vector2(lastSwing.endPositioning.x, lastSwing.endPositioning.y);
-            Vector2 nextHandCoords = new Vector2(currentNote.x, currentNote.y);
-            float angle = Vector3.SignedAngle(Vector3.up, lastHandCoords - nextHandCoords, Vector3.forward);
 
-            // Correct the angle for backhand hits
-            if (currentSwing.sliceParity == Parity.Backhand)
-            {
-                if (angle < 0) { angle += 180; } else if (angle > 0) { angle -= 180; }
-            }
+        float angle = (lastSwing.sliceParity == Parity.Backhand) ?
+            BackhandDict[orientation] :
+            ForehandDict[orientation];
 
-            // Flip for left hand
-            if (!_rightHand) angle *= -1;
+        if (lastSwing.endPositioning.angle == 0 && angle == -180) angle = 0;
 
-            angle = Mathf.Clamp(angle, -90, 90);
-            if (currentNote.y != lastNote.y) angle = Mathf.Clamp(angle, -45, 45);
+        // Checks for angle based on X difference between the 2 notes
+        float xDiff = Mathf.Abs(dotNote.x - lastNote.x);
+        if (xDiff < 3) angle = Mathf.Clamp(angle, -90, 45);
+        if (xDiff == 3) angle = Mathf.Clamp(angle, -90, 90);
 
-            currentSwing.SetStartAngle(angle);
-            currentSwing.SetEndAngle(angle);
-        }
-        return currentSwing;
+        // Clamps inwards backhand hits if the note is only 1 away
+        if (xDiff == 1 && lastNote.x > dotNote.x && _rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
+        else if (xDiff == 1 && lastNote.x < dotNote.x && !_rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
+
+        currentSwing.SetStartAngle(angle);
+        currentSwing.SetEndAngle(angle);
+
+        return;
     }
-
 
     // Attempts to add bomb avoidance based on the isReset tag for a list of swings.
     // NOTE: To improve this, probably want bomb detection in its own function and these swings
@@ -392,7 +436,7 @@ public class SliceMap
                 // Create a new swing with inverse parity to the last.
                 BeatCutData emptySwing = new BeatCutData();
                 emptySwing.sliceParity = (swings[i].sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
-                emptySwing.sliceStartBeat = swings[i - 1].sliceEndBeat + SecondsToBeats(_BPM, 0.15f);
+                emptySwing.sliceStartBeat = swings[i - 1].sliceEndBeat + TimeUtils.SecondsToBeats(_BPM, 0.15f);
                 emptySwing.sliceEndBeat = emptySwing.sliceStartBeat + 0.2f;
                 emptySwing.SetStartPosition(lastNote.x, lastNote.y);
 
@@ -424,21 +468,22 @@ public class SliceMap
         return result;
     }
 
-
     #endregion
 
     #region Helper Functions
+    // Given 2 notes, gets the cut direction of the 2nd note based on the direction from first to last
+    private int CutDirFromNoteToNote(ColourNote firstNote, ColourNote lastNote)
+    {
+        Vector2 dir = (new Vector2(lastNote.x, lastNote.y) - new Vector2(firstNote.x, firstNote.y)).normalized;
+        Vector2 lowestDotProduct = directionalVectors.OrderBy(v => Vector2.Dot(dir, v)).First();
+        Vector2 cutDirection = new Vector2(Mathf.Round(lowestDotProduct.x), Mathf.Round(lowestDotProduct.y));
+        int orientation = directionalVectorToCutDirection[cutDirection];
+        return orientation;
+    }
     // Given a cut direction ID, return angle from appropriate dictionary
     public static float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
         return (parity == Parity.Forehand) ? ForehandDict[cutDirection] : BackhandDict[cutDirection];
-    }
-    // Returns the angle between any 2 given notes
-    private float AngleBetweenNotes(ColourNote firstNote, ColourNote lastNote) {
-        Vector3 firstNoteCoords = new Vector3(firstNote.x, firstNote.y, 0);
-        Vector3 lastNoteCoords = new Vector3 (lastNote.x, lastNote.y, 0);
-        float angle = Vector3.SignedAngle(Vector3.up, lastNoteCoords - firstNoteCoords, Vector3.forward);
-        return angle;
     }
     // Determines if a Note is inverted
     private bool IsInvert(ColourNote lastNote, ColourNote nextNote)
@@ -476,20 +521,11 @@ public class SliceMap
     // Calculates the effective BPM of a swing
     private float SwingEBPM(float BPM, float beatDiff)
     {
-        var seconds = BeatToSeconds(BPM, beatDiff);
+        var seconds = TimeUtils.BeatsToSeconds(BPM, beatDiff);
         TimeSpan time = TimeSpan.FromSeconds(seconds);
 
         return (float)((60000 / time.TotalMilliseconds) / 2);
     }
-    // Converts beats to seconds based on BPM
-    public float BeatToSeconds(float BPM, float beatDiff)
-    {
-        return (beatDiff / (BPM / 60));
-    }
-    // Converts seconds to beats based on BPM
-    public float SecondsToBeats(float BPM, float seconds)
-    {
-        return (BPM/60) * seconds;
-    }
+
     #endregion
 }

@@ -521,6 +521,8 @@ MonoBehaviour:
     type: 3}
   _saberPrefab: {fileID: 3883014027810491326, guid: 82b6775e93e8c644fb9ec3d187e0ecf0,
     type: 3}
+  _wallPrefab: {fileID: 470783057152959951, guid: 91a443e6a7128a441bd5ae3f03ce3789,
+    type: 3}
   _bombPrefab: {fileID: 2055558874998763406, guid: fffb9d4a46b96ab4cadc16bb602eccfd,
     type: 3}
   _speed: 75
@@ -544,7 +546,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 028a8d0594ba28441ad266b4c6fc580b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _customLevelPath: Enter a map filepath here
+  _customLevelPath: Enter map file path here!
   _desiredDifficulty: 9
   _previewMap: 0
   _beatSaberMapIDCSV: 
