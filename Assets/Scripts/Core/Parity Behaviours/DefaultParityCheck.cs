@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditorInternal;
 using UnityEngine;
 
 public interface IParityMethod {
@@ -22,17 +23,17 @@ public class DefaultParityCheck : IParityMethod
             (parity == Parity.Backhand && y == note.y && ((note.x != 0 && x < note.x) || (note.x > 0 && x <= note.x))) },
         { 3, (note, x, y, parity) => (parity == Parity.Forehand && (y == note.y || y == note.y - 1) && ((note.x != 0 && x > note.x) || (note.x > 0 && x >= note.x))) ||
             (parity == Parity.Backhand && y == note.y && ((note.x != 3 && x > note.x) || (note.x < 3 && x >= note.x))) },
-        { 4, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x && x != 3 },
-        { 5, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x && x != 0 },
-        { 6, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x && x != 3 },
-        { 7, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x && x != 0 },
+        { 4, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x && x != 3 && parity != Parity.Forehand },
+        { 5, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x && x != 0 && parity != Parity.Forehand },
+        { 6, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x && x != 3 && parity != Parity.Backhand },
+        { 7, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x && x != 0 && parity != Parity.Backhand },
         { 8, (note,x,y, parity) => false }
     };
 
     public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs)
     {
         // Not found yet
-        bool bombReset = false;
+        bool bombResetIndicated = false;
         for (int i = 0; i < bombs.Count; i++)
         {
             // Get current bomb
@@ -63,8 +64,8 @@ public class DefaultParityCheck : IParityMethod
 
             // Determine if lastnote and current bomb cause issue
             // If we already found reason to reset, no need to try again
-            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y, lastCut.sliceParity);
-            if (bombReset) return true;
+            bombResetIndicated = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y, lastCut.sliceParity);
+            if (bombResetIndicated) return true;
         }
         return false;
     }
@@ -103,10 +104,32 @@ public class DefaultParityCheck : IParityMethod
             _upsideDown = true;
         }
 
-        // Check for potential bomb resets
-        bool bombReset = BombResetCheck(lastCut, bombs);
+        // Check if bombs are in the position to indicate a reset
+        bool bombResetIndicated = BombResetCheck(lastCut, bombs);
 
-        if (bombReset)
+        // Want to do a seconday check:
+        // Checks whether resetting will cause another reset, which helps to catch some edge cases
+        // in bomb detection where it triggers for decor bombs.
+        bool bombResetParityImplied = false;
+        if (bombResetIndicated) {
+            if (nextNote.d == 8 && lastCut.notesInCut.All(x => x.d == 8)) bombResetParityImplied = true;
+            else {
+                // In case of dots, calculate using previous swing swing-angle
+                int altOrient = (lastCut.sliceParity == Parity.Forehand) ?
+                        SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
+                        SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
+
+                if (lastCut.sliceParity == Parity.Forehand)
+                {
+                    if (Mathf.Abs(SliceMap.ForehandDict[altOrient] + SliceMap.BackhandDict[nextNote.d]) >= 90) { bombResetParityImplied = true; }
+                } else
+                {
+                    if (Mathf.Abs(SliceMap.BackhandDict[altOrient] + SliceMap.ForehandDict[nextNote.d]) >= 90) { bombResetParityImplied = true; }
+                }
+            }
+        }
+
+        if (bombResetIndicated && bombResetParityImplied)
         {
             // Set as bomb reset and return same parity as last swing
             currentSwing.resetType = ResetType.Bomb;

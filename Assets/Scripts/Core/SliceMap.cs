@@ -284,24 +284,30 @@ public class SliceMap
             // Work out Parity
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
 
+            // Perform dot checks depending on swing composition.
+            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
+            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
+
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, ref sData, bombsBetweenSwings, _playerXOffset, _rightHand);
 
             // Depending on parity, set angle
-            if (sData.sliceParity == Parity.Backhand) {
-                sData.SetStartAngle(BackhandDict[notesInSwing[0].d]);
-                sData.SetEndAngle(BackhandDict[notesInSwing[^1].d]);
-            } else {
-                sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
-                sData.SetEndAngle(ForehandDict[notesInSwing[^1].d]);
+            if (sData.notesInCut.Any(x => x.d != 8))
+            {
+                if (sData.sliceParity == Parity.Backhand)
+                {
+                    sData.SetStartAngle(BackhandDict[notesInSwing[0].d]);
+                    sData.SetEndAngle(BackhandDict[notesInSwing[^1].d]);
+                }
+                else
+                {
+                    sData.SetStartAngle(ForehandDict[notesInSwing[0].d]);
+                    sData.SetEndAngle(ForehandDict[notesInSwing[^1].d]);
+                }
             }
 
             // If parity is the same as before and not flagged as a bomb reset.
             // LATER: Add logic to determine if adding a swing or rolling is the better option.
             if (sData.sliceParity == lastSwing.sliceParity && sData.resetType != ResetType.Bomb) { sData.resetType = ResetType.Normal; }
-
-            // Perform dot checks depending on swing composition.
-            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
-            if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
 
             // If current parity method thinks we are upside down and not dot notes in next hit, flip values.
             // This catch is in place to turn -180 into 180 (because the dictionary only has a definition from all the way around
@@ -370,8 +376,8 @@ public class SliceMap
         // stop it having a fit.
         angle = ForehandDict[orientation];
 
-        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == -90 && currentSwing.sliceParity == Parity.Forehand) angle *= -1;
-        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == 90 && currentSwing.sliceParity == Parity.Backhand) angle *= -1;
+        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == -90 && lastSwing.sliceParity == Parity.Backhand) angle *= -1;
+        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == 90 && lastSwing.sliceParity == Parity.Forehand) angle *= -1;
         if (angle == -180 || angle == 180) angle = 0;
 
         currentSwing.SetStartAngle(angle);
@@ -402,8 +408,8 @@ public class SliceMap
         if (xDiff == 3) angle = Mathf.Clamp(angle, -90, 90);
 
         // Clamps inwards backhand hits if the note is only 1 away
-        if (xDiff == 1 && lastNote.x > dotNote.x && _rightHand && currentSwing.sliceParity == Parity.Backhand) angle = 0;
-        else if (xDiff == 1 && lastNote.x < dotNote.x && !_rightHand && currentSwing.sliceParity == Parity.Backhand) angle = 0;
+        if (xDiff == 1 && lastNote.x > dotNote.x && _rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
+        else if (xDiff == 1 && lastNote.x < dotNote.x && !_rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
 
         currentSwing.SetStartAngle(angle);
         currentSwing.SetEndAngle(angle);
