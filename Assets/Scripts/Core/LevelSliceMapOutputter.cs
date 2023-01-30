@@ -62,7 +62,13 @@ public class LevelSliceMapOutputter
         }
 
         string outputJson = "{";
-        outputJson += JsonUtility.ToJson(header, prettyPrint: true);
+
+        string headerStr = JsonUtility.ToJson(header, prettyPrint: true);
+        Debug.Log("headerStr = " + headerStr);
+        headerStr = headerStr.Remove(0, 1);
+        headerStr = headerStr.Remove(headerStr.Length - 1);
+
+        outputJson += headerStr;
         outputJson += ",";
         outputJson += "\n\"analytics\": [";
 
