@@ -201,9 +201,10 @@ public class SliceMap
                 Vector2 ATB = noteBPos - noteAPos;
 
                 Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == noteA.d).Key;
-                if (Vector2.Dot(noteACutVector, ATB) < 0) {
+                float dotProduct = Vector2.Dot(noteACutVector, ATB);
+                if (dotProduct < 0) {
                     ATB = -ATB;   // B before A
-                } 
+                }
 
                 // Sort the cubes according to their position along the direction vector
                 notesInSwing.Sort((a, b) => Vector2.Dot(new Vector2(a.x, a.y) - new Vector2(noteA.x, noteA.y), ATB).CompareTo(Vector2.Dot(new Vector2(b.x, b.y) - new Vector2(noteA.x, noteA.y), ATB)));
@@ -244,6 +245,7 @@ public class SliceMap
 
             // Get swing EBPM, if reset then double
             sData.swingEBPM = SwingEBPM(_BPM, currentNote.b - lastNote.b);
+            lastSwing.sliceEndBeat = (lastNote.b - currentNote.b) / 2 + lastNote.b;
             if (sData.IsReset) { sData.swingEBPM *= 2; }
 
             // Invert Check
@@ -285,7 +287,7 @@ public class SliceMap
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
 
             // Perform dot checks depending on swing composition.
-            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
+            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(ref sData);
             if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
 
             sData.sliceParity = _parityMethodology.ParityCheck(lastSwing, ref sData, bombsBetweenSwings, _playerXOffset, _rightHand);
@@ -351,9 +353,21 @@ public class SliceMap
 
         // Convert the cut direction to a directional vector then do the dot product between noteA to noteB and last swing direction
         Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == opposingCutDict[lastNoteClosestCutDir]).Key;
-
-        if (Vector2.Dot(noteACutVector, ATB) < 0) {
+        float dotProduct = Vector2.Dot(noteACutVector, ATB);
+        if (dotProduct < 0) {
             ATB = -ATB;
+        } else if(dotProduct == 0)
+        {
+            // In the event its at a right angle, pick the note with the closest distance
+            ColourNote lastNote = lastSwing.notesInCut[^1];
+
+            float aDist = Vector2.Distance(noteAPos, new Vector2(lastNote.x, lastNote.y));
+            float bDist = Vector2.Distance(noteBPos, new Vector2(lastNote.x, lastNote.y));
+
+            if (Mathf.Abs(aDist) < Mathf.Abs(bDist))
+            {
+                ATB = -ATB;
+            }
         }
 
         // Sort the cubes according to their position along the direction vector
@@ -362,7 +376,7 @@ public class SliceMap
     }
 
     // Modifies a Swing if Dot Notes are involved
-    private void CalculateDotStackSwingAngle(BeatCutData lastSwing, ref BeatCutData currentSwing)
+    private void CalculateDotStackSwingAngle(ref BeatCutData currentSwing)
     {
         // Get the first and last note based on beats
         float angle;
@@ -371,15 +385,7 @@ public class SliceMap
 
         int orientation = CutDirFromNoteToNote(firstNote, lastNote);
 
-        // Okay so originally i was using the dictionary corrosponding to parity,
-        // but that just caused issues and I gave up so I put in some catches below to
-        // stop it having a fit.
         angle = ForehandDict[orientation];
-
-        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == -90 && lastSwing.sliceParity == Parity.Backhand) angle *= -1;
-        if (firstNote.x > lastSwing.notesInCut[^1].x && angle == 90 && lastSwing.sliceParity == Parity.Forehand) angle *= -1;
-        if (angle == -180 || angle == 180) angle = 0;
-
         currentSwing.SetStartAngle(angle);
         currentSwing.SetEndAngle(angle);
     }
@@ -410,6 +416,9 @@ public class SliceMap
         // Clamps inwards backhand hits if the note is only 1 away
         if (xDiff == 1 && lastNote.x > dotNote.x && _rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
         else if (xDiff == 1 && lastNote.x < dotNote.x && !_rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
+
+        if ((dotNote.y == 0) && dotNote.y != lastNote.y && lastSwing.sliceParity == Parity.Backhand) { Mathf.Clamp(angle, 45, -45); }
+        if ((dotNote.y == 2) && dotNote.y != lastNote.y && lastSwing.sliceParity == Parity.Forehand) { Mathf.Clamp(angle, 45, -45); }
 
         currentSwing.SetStartAngle(angle);
         currentSwing.SetEndAngle(angle);
