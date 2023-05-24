@@ -32,6 +32,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     [SerializeField] private Text _timingDataText;
     [SerializeField] private Text _leftSaberDataText;
     [SerializeField] private Text _rightSaberDataText;
+    [SerializeField] private Text _offsetDataText;
     [SerializeField] private float _startTime = 0.0f;
 
     private BeatmapDifficultyRank _desiredDifficulty;
@@ -143,6 +144,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _bombIndex = 0;
 
         _beatmap = inBeatmapData;
+        _beatsPerSecond = _BPM / 60;
         _beatTimeToReachSabers = TimeUtils.SecondsToBeats(_BPM, _timeToReachSabers);
         _beatTimeToPrepareSwing = _beatTimeToReachSabers * 0.5f;
 
@@ -188,12 +190,12 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _leftSliceIndex = 0;
         _rightSliceIndex = 0;
 
-        _isPreviewing = true;
-
         if (_startTime > 0.0f)
         {
             SetTime(_startTime);
         }
+
+        _isPreviewing = true;
     }
 
     private void Update()
@@ -258,7 +260,8 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         if (_leftSliceIndex < _sliceMapLeft.GetSliceCount())
         {
             BeatCutData cutData = _sliceMapLeft.GetBeatCutData(_leftSliceIndex);
-            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToPrepareSwing)
+            _leftSaber.SetRestingWristPosition(1+cutData.playerXOffset, 0);
+            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset)
             {
                 _leftSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
                 _leftSaber.SetTargetWristOrientation(cutData.startPositioning.angle * -1);
@@ -279,10 +282,12 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
                 }
             }
             UpdateSaberCutText(_leftSaberDataText, cutData);
+            UpdateOffsetInfoText(_offsetDataText, cutData);
         }
         if (_rightSliceIndex < _sliceMapRight.GetSliceCount())
         {
             BeatCutData cutData = _sliceMapRight.GetBeatCutData(_rightSliceIndex);
+            _rightSaber.SetRestingWristPosition(2 + cutData.playerXOffset, 0);
             if (_beatTime > cutData.sliceStartBeat - _startBeatOffset)
             {
                 _rightSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
@@ -304,6 +309,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
                 }
             }
             UpdateSaberCutText(_rightSaberDataText, cutData);
+            UpdateOffsetInfoText(_offsetDataText, cutData);
         }
 
         List<GameObject> removals = new List<GameObject>();
@@ -334,6 +340,11 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
     private void UpdateSaberCutText(Text text, BeatCutData data)
     {
         text.text = "Parity: " + data.sliceParity.ToString() + ",\tAngle: " + data.startPositioning.angle + ",\tPosition: (" + data.startPositioning.x + "," + data.startPositioning.y + ")";
+    }
+
+    private void UpdateOffsetInfoText(Text text, BeatCutData data)
+    {
+        text.text = "X offset: " + data.playerXOffset + ",\tY offset: " + data.playerYOffset;
     }
 
     public void SpawnNote(int x, int y, int d, int c)
@@ -377,10 +388,12 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
                 break;
             }
         }
+
         if (_blockIndex == 0)
         {
             _blockIndex = _blocks.Count;
         }
+
         for (int i = 0; i < _bombs.Count; ++i)
         {
             if (_bombs[i].b > _beatTime)
@@ -389,10 +402,12 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
                 break;
             }
         }
+
         if (_bombIndex == 0)
         {
             _bombIndex = _bombs.Count;
         }
+
         for (int i = 0; i < _obstacles.Count; ++i)
         {
             if (_obstacles[i].b > _beatTime)
@@ -415,6 +430,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
                 break;
             }
         }
+
         int numRightCutData = _sliceMapRight.GetSliceCount();
         for (int i = 0; i < numRightCutData; ++i)
         {

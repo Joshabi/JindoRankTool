@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditorInternal;
 using UnityEngine;
 
 public interface IParityMethod {
-    Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, float playerXOffset, bool rightHand);
+    Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, int playerXOffset, bool rightHand, float timeTillNextNote = 0.1f);
     bool UpsideDown { get; }
 }
 
@@ -15,7 +14,7 @@ public class DefaultParityCheck : IParityMethod
     private bool _upsideDown;
 
     // Returns true if the inputted note and bomb coordinates cause a reset potentially
-    private Dictionary<int, Func<Vector2, int, int, Parity, bool>> _bombDetectionConditions = new()
+    private readonly Dictionary<int, Func<Vector2, int, int, Parity, bool>> _bombDetectionConditions = new()
     {
         { 0, (note, x, y, parity) => ((y >= note.y && y != 0) || (y > note.y && y > 0)) && x == note.x },
         { 1, (note, x, y, parity) => ((y <= note.y && y != 2) || (y < note.y && y < 2)) && x == note.x },
@@ -30,7 +29,7 @@ public class DefaultParityCheck : IParityMethod
         { 8, (note,x,y, parity) => false }
     };
 
-    public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs)
+    public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs, int xPlayerOffset)
     {
         // Not found yet
         bool bombResetIndicated = false;
@@ -64,13 +63,13 @@ public class DefaultParityCheck : IParityMethod
 
             // Determine if lastnote and current bomb cause issue
             // If we already found reason to reset, no need to try again
-            bombResetIndicated = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y, lastCut.sliceParity);
+            bombResetIndicated = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x, note.y), bomb.x - (xPlayerOffset*2) - xOffset, bomb.y, lastCut.sliceParity);
             if (bombResetIndicated) return true;
         }
         return false;
     }
 
-    public Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, float playerXOffset, bool rightHand)
+    public Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, int playerXOffset, bool rightHand, float timeTillNextNote = 0.1f)
     {
         // AFN: Angle from neutral
         // Assuming a forehand down hit is neutral, and a backhand up hit
@@ -93,6 +92,7 @@ public class DefaultParityCheck : IParityMethod
             SliceMap.BackhandDict[orient] :
             SliceMap.ForehandDict[orient];
 
+        // Angle from neutral difference
         float angleChange = currentAFN - nextAFN;
         _upsideDown = false;
 
@@ -105,7 +105,7 @@ public class DefaultParityCheck : IParityMethod
         }
 
         // Check if bombs are in the position to indicate a reset
-        bool bombResetIndicated = BombResetCheck(lastCut, bombs);
+        bool bombResetIndicated = BombResetCheck(lastCut, bombs, playerXOffset);
 
         // Want to do a seconday check:
         // Checks whether resetting will cause another reset, which helps to catch some edge cases
@@ -129,26 +129,42 @@ public class DefaultParityCheck : IParityMethod
             }
         }
 
-        if (bombResetIndicated && bombResetParityImplied)
-        {
-            // Set as bomb reset and return same parity as last swing
+        // If bomb reset indicated and direction implies, then reset
+        if (bombResetIndicated && bombResetParityImplied) {
             currentSwing.resetType = ResetType.Bomb;
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }
 
+        // If last cut is entirely dot notes and next cut is too, then parity is assumed to be maintained
+        if (lastCut.notesInCut.All(x => x.d == 8) && currentSwing.notesInCut.All(x => x.d == 8)) {
+            return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
+        }
+
+        // If time exceeds a certain amount, just reset. This will be made way harsher for the less
+        // parity strict mode applied to maps like routine ect...
+        if (timeTillNextNote > 3) {
+            currentSwing.resetType = ResetType.Normal;
+            return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
+        }
+
         // AKA, If a 180 anticlockwise (right) clockwise (left) rotation
-        if (lastCut.endPositioning.angle == 180) {
+        // FIXES ISSUES with uhh, some upside down hits?
+        if (lastCut.endPositioning.angle == 180)
+        {
             var altNextAFN = 180 + nextAFN;
-            if(altNextAFN >= 0) {
+            if (altNextAFN >= 0)
+            {
                 return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
-            } else {
+            }
+            else
+            {
                 currentSwing.resetType = ResetType.Normal;
                 return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
             }
         }
 
         // If the angle change exceeds 180 even after accounting for bigger rotations then triangle
-        if (Mathf.Abs(angleChange) > 180 && !UpsideDown)
+        if (Mathf.Abs(angleChange) > 270 && !UpsideDown)
         {
             currentSwing.resetType = ResetType.Normal;
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;

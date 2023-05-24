@@ -24,7 +24,7 @@ public class ResetParityCheck : IParityMethod
         { 8, (note,x,y, parity) => false }
     };
 
-    public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs)
+    public bool BombResetCheck(BeatCutData lastCut, List<BombNote> bombs, int xPlayerOffset)
     {
         // Not found yet
         bool bombReset = false;
@@ -57,13 +57,13 @@ public class ResetParityCheck : IParityMethod
 
             // Determine if lastnote and current bomb cause issue
             // If we already found reason to reset, no need to try again
-            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x + xOffset, note.y), bomb.x, bomb.y, lastCut.sliceParity);
+            bombReset = _bombDetectionConditions[lastNoteCutDir](new Vector2(note.x, note.y), bomb.x + xOffset + xPlayerOffset, bomb.y, lastCut.sliceParity);
             if (bombReset) return true;
         }
         return false;
     }
 
-    public Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, float playerXOffset, bool rightHand)
+    public Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, int playerXOffset, bool rightHand, float timeTillNextNote = 0.1f)
     {
         // AFN: Angle from neutral
         // Assuming a forehand down hit is neutral, and a backhand up hit
@@ -90,7 +90,7 @@ public class ResetParityCheck : IParityMethod
         _upsideDown = false;
 
         // Check for potential bomb resets
-        bool bombReset = BombResetCheck(lastCut, bombs);
+        bool bombReset = BombResetCheck(lastCut, bombs, playerXOffset);
 
         if (bombReset)
         {
