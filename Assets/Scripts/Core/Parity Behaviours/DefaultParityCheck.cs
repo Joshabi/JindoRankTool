@@ -140,13 +140,6 @@ public class DefaultParityCheck : IParityMethod
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
         }
 
-        // If time exceeds a certain amount, just reset. This will be made way harsher for the less
-        // parity strict mode applied to maps like routine ect...
-        if (timeTillNextNote > 3) {
-            currentSwing.resetType = ResetType.Normal;
-            return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
-        }
-
         // AKA, If a 180 anticlockwise (right) clockwise (left) rotation
         // FIXES ISSUES with uhh, some upside down hits?
         if (lastCut.endPositioning.angle == 180)

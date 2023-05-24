@@ -79,11 +79,6 @@ public class SliceMap
     public static readonly Dictionary<int, int> opposingCutDict = new Dictionary<int, int>()
     { { 0, 1 }, { 1, 0 }, { 2, 3 }, { 3, 2 }, { 4, 7 }, { 7, 4 }, { 5, 6 }, { 6, 5 } };
 
-    private static readonly List<int> forehandResetDict = new List<int>()
-    { 1, 2, 3, 6, 7 };
-    private static readonly List<int> backhandResetDict = new List<int>()
-    { 0, 4, 5 };
-
     public static Dictionary<int, float> ForehandDict { get { return (_rightHand) ? rightForehandDict : leftForehandDict; } }
     public static Dictionary<int, float> BackhandDict { get { return (_rightHand) ? rightBackhandDict : leftBackhandDict; } }
 
