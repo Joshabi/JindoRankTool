@@ -87,7 +87,7 @@ public class SliceMap
     public static Dictionary<int, float> ForehandDict { get { return (_rightHand) ? rightForehandDict : leftForehandDict; } }
     public static Dictionary<int, float> BackhandDict { get { return (_rightHand) ? rightBackhandDict : leftBackhandDict; } }
 
-    // Contains a list of directional vecotrs
+    // Contains a list of directional vectors
     public static readonly Vector2[] directionalVectors =
 {
         new Vector2(0, 1),   // up
@@ -310,7 +310,7 @@ public class SliceMap
             List<BombNote> bombsBetweenSwings = bombs.FindAll(x => x.b > lastNote.b && x.b < notesInSwing[^1].b);
 
             // Perform dot checks depending on swing composition.
-            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(ref sData);
+            if (sData.notesInCut.All(x => x.d == 8) && sData.notesInCut.Count > 1) CalculateDotStackSwingAngle(lastSwing, ref sData);
             if (sData.notesInCut[0].d == 8 && sData.notesInCut.Count == 1) CalculateDotDirection(lastSwing, ref sData);
 
             float timeSinceLastNote = TimeUtils.BeatsToSeconds(_BPM, currentNote.b - lastSwing.notesInCut[^1].b);
@@ -376,7 +376,8 @@ public class SliceMap
         float dotProduct = Vector2.Dot(noteACutVector, ATB);
         if (dotProduct < 0) {
             ATB = -ATB;
-        } else if(dotProduct == 0)
+        } 
+        else if(dotProduct == 0)
         {
             // In the event its at a right angle, pick the note with the closest distance
             ColourNote lastNote = lastSwing.notesInCut[^1];
@@ -386,8 +387,17 @@ public class SliceMap
 
             if (Mathf.Abs(aDist) < Mathf.Abs(bDist))
             {
-                ATB = -ATB;
+                nextNotes.Sort((a, b) => Vector2.Distance(new Vector2(a.x, a.y), new Vector2(lastNote.x, lastNote.y))
+                    .CompareTo(Vector2.Distance(new Vector2(b.x, b.y), new Vector2(lastNote.x, lastNote.y))));
+                return nextNotes;
             }
+            else
+            {
+                nextNotes.Sort((a, b) => Vector2.Distance(new Vector2(b.x, b.y), new Vector2(lastNote.x, lastNote.y))
+                    .CompareTo(Vector2.Distance(new Vector2(a.x, a.y), new Vector2(lastNote.x, lastNote.y))));
+                return nextNotes;
+            }
+
         }
 
         // Sort the cubes according to their position along the direction vector
@@ -396,16 +406,25 @@ public class SliceMap
     }
 
     // Modifies a Swing if Dot Notes are involved
-    private void CalculateDotStackSwingAngle(ref BeatCutData currentSwing)
+    private void CalculateDotStackSwingAngle(BeatCutData lastSwing, ref BeatCutData currentSwing)
     {
-        // Get the first and last note based on beats
-        float angle;
+        // Get the first and last note based on array order
+        float angle, altAngle, change, altChange;
         ColourNote firstNote = currentSwing.notesInCut[0];
         ColourNote lastNote = currentSwing.notesInCut[^1];
 
         int orientation = CutDirFromNoteToNote(firstNote, lastNote);
+        int altOrientation = CutDirFromNoteToNote(lastNote, firstNote);
 
-        angle = ForehandDict[orientation];
+        angle = (currentSwing.sliceParity == Parity.Forehand) ? ForehandDict[orientation] : BackhandDict[orientation];
+        altAngle = (currentSwing.sliceParity == Parity.Forehand) ? ForehandDict[altOrientation] : BackhandDict[altOrientation];
+
+        change = lastSwing.endPositioning.angle - angle;
+        altChange = lastSwing.endPositioning.angle - altAngle;
+
+
+        if (Mathf.Abs(altChange) < Mathf.Abs(change)) angle = altAngle;
+
         currentSwing.SetStartAngle(angle);
         currentSwing.SetEndAngle(angle);
     }
@@ -418,25 +437,20 @@ public class SliceMap
 
         int orientation = CutDirFromNoteToNote(lastNote, dotNote);
 
+        // If same grid position, just maintain angle
         if (dotNote.x == lastNote.x && dotNote.y == lastNote.y) {
             orientation = opposingCutDict[orientation];
         }
 
-        float angle = (lastSwing.sliceParity == Parity.Backhand) ?
-            BackhandDict[orientation] :
-            ForehandDict[orientation];
+        float angle = (lastSwing.sliceParity == Parity.Forehand) ?
+            ForehandDict[orientation] :
+            BackhandDict[orientation];
 
-        // Checks for angle based on X difference between the 2 notes
         float xDiff = Mathf.Abs(dotNote.x - lastNote.x);
-        if (xDiff < 3) angle = Mathf.Clamp(angle, -90, 45);
-        if (xDiff == 3) angle = Mathf.Clamp(angle, -90, 90);
-
-        // Clamps inwards backhand hits if the note is only 1 away
-        if (xDiff == 1 && lastNote.x > dotNote.x && _rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
-        else if (xDiff == 1 && lastNote.x < dotNote.x && !_rightHand && lastSwing.sliceParity == Parity.Forehand) angle = 0;
-
-        if ((dotNote.y == 0) && dotNote.y != lastNote.y && lastSwing.sliceParity == Parity.Backhand) { Mathf.Clamp(angle, 45, -45); }
-        if ((dotNote.y == 2) && dotNote.y != lastNote.y && lastSwing.sliceParity == Parity.Forehand) { Mathf.Clamp(angle, 45, -45); }
+        float yDiff = Mathf.Abs(dotNote.y - lastNote.y);
+        if (xDiff == 3) { angle = Mathf.Clamp(angle, -90, 90); }
+        else if (yDiff == 0 && xDiff < 2) { angle = Mathf.Clamp(angle, -45, 45); }
+        else if (yDiff > 0 && xDiff > 0) { angle = Mathf.Clamp(angle, -45, 45); }
 
         currentSwing.SetStartAngle(angle);
         currentSwing.SetEndAngle(angle);
@@ -505,11 +519,13 @@ public class SliceMap
         int orientation = directionalVectorToCutDirection[cutDirection];
         return orientation;
     }
+
     // Given a cut direction ID, return angle from appropriate dictionary
     public static float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
         return (parity == Parity.Forehand) ? ForehandDict[cutDirection] : BackhandDict[cutDirection];
     }
+
     // Determines if a Note is inverted
     private bool IsInvert(ColourNote lastNote, ColourNote nextNote)
     {
