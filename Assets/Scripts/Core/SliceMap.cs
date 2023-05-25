@@ -164,7 +164,7 @@ public class SliceMap
         _rightHand = isRightHand;
         List<BeatCutData> result = new List<BeatCutData>();
 
-        float sliderPrecision = 1 / 6f;
+        float sliderPrecision = 1 / 5f;
         List<ColourNote> notesInSwing = new List<ColourNote>();
 
         // For every note in the list of notes, attempt to construct a swing
