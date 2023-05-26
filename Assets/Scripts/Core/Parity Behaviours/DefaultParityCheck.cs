@@ -42,15 +42,11 @@ public class DefaultParityCheck : IParityMethod
             // If in the center 2 grid spaces, no point trying
             if ((bomb.x == 1 || bomb.x == 2) && bomb.y == 1) continue;
 
-            // Get the last note. In the case of a stack, picks the note that isnt at 2 or 0 as
-            // it triggers a reset when it shouldn't.
-
-            note = lastCut.notesInCut.Where(note => note.x == lastCut.endPositioning.x && note.y == lastCut.endPositioning.y).FirstOrDefault();
+            note = lastCut.notesInCut[^1];
+            int lastNoteCutDir = note.d;
 
             // Get the last notes cut direction based on the last swings angle
-            var lastNoteCutDir = (lastCut.sliceParity == Parity.Forehand) ?
-                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.startPositioning.angle / 45.0) * 45).Key :
-                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.startPositioning.angle / 45.0) * 45).Key;
+            if (note.d == 8) lastNoteCutDir = SliceMap.CutDirectionGivenAngle(lastCut.endPositioning.angle, 90.0f, lastCut.sliceParity);
 
             // Offset the checking if the entire outerlane bombs indicate moving inwards
             int xOffset = 0;
@@ -84,9 +80,7 @@ public class DefaultParityCheck : IParityMethod
             SliceMap.ForehandDict[lastCut.notesInCut[0].d];
 
         int orient = nextNote.d;
-        if(nextNote.d == 8) orient = (lastCut.sliceParity == Parity.Forehand) ?
-                SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
-                SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
+        if(nextNote.d == 8) SliceMap.CutDirectionGivenAngle(lastCut.endPositioning.angle, 45.0f, lastCut.sliceParity);
 
         float nextAFN = (lastCut.sliceParity == Parity.Forehand) ?
             SliceMap.BackhandDict[orient] :
@@ -107,30 +101,8 @@ public class DefaultParityCheck : IParityMethod
         // Check if bombs are in the position to indicate a reset
         bool bombResetIndicated = BombResetCheck(lastCut, bombs, playerXOffset);
 
-        // Want to do a seconday check:
-        // Checks whether resetting will cause another reset, which helps to catch some edge cases
-        // in bomb detection where it triggers for decor bombs.
-        bool bombResetParityImplied = false;
-        if (bombResetIndicated) {
-            if (nextNote.d == 8 && lastCut.notesInCut.All(x => x.d == 8)) bombResetParityImplied = true;
-            else {
-                // In case of dots, calculate using previous swing swing-angle
-                int altOrient = (lastCut.sliceParity == Parity.Forehand) ?
-                        SliceMap.ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key :
-                        SliceMap.BackhandDict.FirstOrDefault(x => x.Value == Math.Round(lastCut.endPositioning.angle / 45.0) * 45).Key;
-
-                if (lastCut.sliceParity == Parity.Forehand)
-                {
-                    if (Mathf.Abs(SliceMap.ForehandDict[altOrient] + SliceMap.BackhandDict[nextNote.d]) >= 90) { bombResetParityImplied = true; }
-                } else
-                {
-                    if (Mathf.Abs(SliceMap.BackhandDict[altOrient] + SliceMap.ForehandDict[nextNote.d]) >= 90) { bombResetParityImplied = true; }
-                }
-            }
-        }
-
         // If bomb reset indicated and direction implies, then reset
-        if (bombResetIndicated && bombResetParityImplied) {
+        if (bombResetIndicated) {
             currentSwing.resetType = ResetType.Bomb;
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
         }

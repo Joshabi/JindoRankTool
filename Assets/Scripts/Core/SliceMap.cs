@@ -16,8 +16,7 @@ public enum ResetType
 {
     None,
     Normal,
-    Bomb,
-    Roll
+    Bomb
 }
 
 [System.Serializable]
@@ -51,7 +50,6 @@ public struct BeatCutData
 
     public PositioningData startPositioning;
     public PositioningData endPositioning;
-
 }
 
 // Adapted from Joshabi's ParityChecker
@@ -364,7 +362,7 @@ public class SliceMap
         Vector2 ATB = noteBPos - noteAPos;
 
         // Incase the last note was a dot, turn the swing angle into the closest cut direction based on last swing parity
-        int lastNoteClosestCutDir = ForehandDict.FirstOrDefault(x => x.Value == Math.Round(lastSwing.startPositioning.angle / 45.0) * 45).Key;
+        int lastNoteClosestCutDir = CutDirectionGivenAngle(lastSwing.endPositioning.angle, 45.0f, Parity.Forehand);
 
         // Convert the cut direction to a directional vector then do the dot product between noteA to noteB and last swing direction
         Vector2 noteACutVector = directionalVectorToCutDirection.FirstOrDefault(x => x.Value == opposingCutDict[lastNoteClosestCutDir]).Key;
@@ -519,6 +517,19 @@ public class SliceMap
     public static float AngleGivenCutDirection(int cutDirection, Parity parity)
     {
         return (parity == Parity.Forehand) ? ForehandDict[cutDirection] : BackhandDict[cutDirection];
+    }
+
+    // Returns cut direction given angle and parity
+    public static int CutDirectionGivenAngle(float angle, float interval, Parity parity)
+    {
+        float intervalTimes = angle / interval;
+        float roundedAngle = (float)((intervalTimes >= 0) ? Math.Floor(intervalTimes / interval) * interval :
+                Math.Ceiling(intervalTimes / interval) * interval);
+        roundedAngle *= interval;
+
+        return (parity == Parity.Forehand) ?
+            SliceMap.ForehandDict.FirstOrDefault(x => x.Value == roundedAngle).Key :
+            SliceMap.BackhandDict.FirstOrDefault(x => x.Value == roundedAngle).Key;
     }
 
     // Determines if a Note is inverted
