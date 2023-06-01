@@ -1,17 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UIElements;
 
-public interface IParityMethod {
-    Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, int playerXOffset, bool rightHand, float timeTillNextNote = 0.1f);
-    bool UpsideDown { get; }
-}
-
-public class DefaultParityCheck : IParityMethod
+public class RestrictedParityBehaviour : IParityMethod
 {
-    public bool UpsideDown { get; private set; }
+    public bool UpsideDown => false;
 
     public Parity ParityCheck(BeatCutData lastCut, ref BeatCutData currentSwing, List<BombNote> bombs, int playerXOffset, bool rightHand, float timeTillNextNote = 0.1f)
     {
@@ -36,16 +30,6 @@ public class DefaultParityCheck : IParityMethod
 
         // Angle from neutral difference
         float angleChange = currentAFN - nextAFN;
-        UpsideDown = false;
-
-        switch (lastCut.sliceParity)
-        {
-            // Determines if potentially an upside down hit based on note cut direction and last swing angle
-            case Parity.Backhand when lastCut.endPositioning.angle > 0 && nextNote.d is 0 or 8:
-            case Parity.Forehand when lastCut.endPositioning.angle > 0 && nextNote.d is 1 or 8:
-                UpsideDown = true;
-                break;
-        }
 
         List<BeatGrid> intervalGrids = new();
         List<BombNote> bombsToAdd = new();
@@ -118,13 +102,30 @@ public class DefaultParityCheck : IParityMethod
         }
 
         // If last cut is entirely dot notes and next cut is too, then parity is assumed to be maintained
-        if (lastCut.notesInCut.All(x => x.d == 8) && currentSwing.notesInCut.All(x => x.d == 8))
+        if (currentSwing.notesInCut.All(x => x.d == 8))
         {
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Backhand : Parity.Forehand;
         }
 
+        float altNextAFN = (lastCut.sliceParity == Parity.Backhand) ?
+            SliceMap.BackhandDict[orient] :
+            SliceMap.ForehandDict[orient];
+
+        if (MathF.Abs(currentAFN - altNextAFN) < 90)
+        {
+            currentSwing.resetType = ResetType.Normal;
+            return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
+        }
+
+        if (nextAFN > 90 
+            || nextAFN < -135)
+        {
+            currentSwing.resetType = ResetType.Normal;
+            return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
+        }
+
         // If the angle change exceeds 180 even after accounting for bigger rotations then triangle
-        if (Mathf.Abs(angleChange) > 270 && !UpsideDown)
+        if (Mathf.Abs(angleChange) > 135)
         {
             currentSwing.resetType = ResetType.Normal;
             return (lastCut.sliceParity == Parity.Forehand) ? Parity.Forehand : Parity.Backhand;
