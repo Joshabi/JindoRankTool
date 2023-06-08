@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using JoshaParity;
 using UnityEngine;
 using UnityEngine.Networking;
 public class LevelLoader
@@ -41,7 +42,7 @@ public class LevelLoader
             LevelDifficultyStructure[] diffs = loadedLevel._difficultyBeatmapSets;
             foreach (LevelDifficultyStructure diff in diffs)
             {
-                if (!diff._beatmapCharacteristicName.ToLower().Equals("lightshow") && !diff._beatmapCharacteristicName.ToLower().Equals("360degree") && !diff._beatmapCharacteristicName.ToLower().Equals("90degree"))
+                if (!diff._beatmapCharacteristicName.ToLower().Equals("lightshow") && !diff._beatmapCharacteristicName.ToLower().Equals("360degree") && !diff._beatmapCharacteristicName.ToLower().Equals("90degree") && !diff._beatmapCharacteristicName.ToLower().Equals("lawless"))
                 {
                     foreach (BeatmapStructure difficulty in diff._difficultyBeatmaps)
                     {

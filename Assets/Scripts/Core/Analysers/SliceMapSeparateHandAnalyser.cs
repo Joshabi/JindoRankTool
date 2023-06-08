@@ -1,3 +1,4 @@
+using JoshaParity;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,15 +12,15 @@ public struct PerHandData
 
 public abstract class SliceMapSeparateHandAnalyser : SliceMapBucketedAnalyser<PerHandData>
 {
-    public override void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public override void ProcessSwingData(MapDatabase mapDatabase, BeatmapStructure mapMetadata, List<SwingData> leftHand, List<SwingData> rightHand)
     {
-        base.ProcessSliceMaps(mapDatabase, mapMetadata, leftHand, rightHand);
+        base.ProcessSwingData(mapDatabase, mapMetadata, leftHand, rightHand);
 
         ProcessHand(leftHand, isLeftHand: true);
         ProcessHand(rightHand, isLeftHand: false);
     }
 
-    protected abstract void ProcessHand(SliceMap hand, bool isLeftHand);
+    protected abstract void ProcessHand(List<SwingData> hand, bool isLeftHand);
 
     protected void UpdateBucketValue(int bucketIndex, float value, bool isLeftHand)
     {

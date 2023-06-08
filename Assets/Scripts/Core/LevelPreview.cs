@@ -1,6 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using JoshaParity;
 using UnityEngine;
+using System.Runtime;
 using UnityEngine.UI;
 
 public interface IRuntimeLevelContext
@@ -43,6 +46,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
     private float _startBeatOffset = 0.0f;
     private float _beatsPerSecond = 0.0f;
+    private MapAnalyser _analyser;
     private List<ColourNote> _blocks = new List<ColourNote>();
     private List<BombNote> _bombs = new List<BombNote>();
     private List<Obstacle> _obstacles = new List<Obstacle>();
@@ -52,8 +56,8 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
 
     private SaberController _leftSaber;
     private SaberController _rightSaber;
-    private SliceMap _sliceMapLeft;
-    private SliceMap _sliceMapRight;
+    private List<SwingData> _leftHandSwings;
+    private List<SwingData> _rightHandSwings;
     private int _leftSliceIndex = 0;
     private int _rightSliceIndex = 0;
 
@@ -126,6 +130,10 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _BPM = loadedLevel._beatsPerMinute;
         _beatmap = beatmapData;
         _currentMapDirectory = levelFolder;
+
+        MapAnalyser mapAnalyser = new(levelFolder);
+        _analyser = mapAnalyser;
+
         _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";
         _levelAudioLoader.LoadSong(_currentMapDirectory + "/" + beatmapData.Metadata.songFilename, OnLevelAudioLoaded);
     }
@@ -173,6 +181,23 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         {
             _blocks.Add(block);
         }
+
+        if (_beatmap.BeatData.burstSliders != null)
+        {
+            foreach (BurstSlider slider in _beatmap.BeatData.burstSliders)
+            {
+                _blocks.Add(new ColourNote()
+                    {
+                        x = slider.x,
+                        y = slider.y,
+                        c = slider.c,
+                        d = slider.d
+                    }
+
+                );
+            }
+        }
+
         _blocks.Sort((x, y) => x.b.CompareTo(y.b));
         foreach (BombNote bomb in _beatmap.BeatData.bombNotes)
         {
@@ -185,8 +210,11 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         }
         _obstacles.Sort((x, y) => x.b.CompareTo(y.b));
 
-        _sliceMapRight = new SliceMap(_BPM, _blocks, _bombs, _obstacles, true);
-        _sliceMapLeft = new SliceMap(_BPM, _blocks, _bombs, _obstacles, false);
+        _desiredDifficulty = _beatmap.Metadata._difficultyRank;
+        List<SwingData> swings = _analyser.GetSwingData(_desiredDifficulty, "standard");
+        _leftHandSwings = swings.FindAll(x => !x.rightHand);
+        _rightHandSwings = swings.FindAll(x => x.rightHand);
+
         _leftSliceIndex = 0;
         _rightSliceIndex = 0;
 
@@ -257,59 +285,60 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         }
 
 
-        if (_leftSliceIndex < _sliceMapLeft.GetSliceCount())
+        if (_leftSliceIndex < _leftHandSwings.Count)
         {
-            BeatCutData cutData = _sliceMapLeft.GetBeatCutData(_leftSliceIndex);
-            _leftSaber.SetRestingWristPosition(1+cutData.playerXOffset, 0);
-            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset)
+            // Change beatcutdata into swing data
+            SwingData swingData = _leftHandSwings[_leftSliceIndex];
+            _leftSaber.SetRestingWristPosition(1+(int)swingData.playerHorizontalOffset, 0);
+            if (_beatTime > swingData.swingStartBeat - _startBeatOffset)
             {
-                _leftSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
-                _leftSaber.SetTargetWristOrientation(cutData.startPositioning.angle * -1);
-                _leftSaber.SetTargetEBPM(cutData.swingEBPM);
+                _leftSaber.SetTargetWristPosition(swingData.startPos.x, swingData.startPos.y);
+                _leftSaber.SetTargetWristOrientation(swingData.startPos.rotation * -1);
+                _leftSaber.SetTargetEBPM(swingData.swingEBPM);
             }
-            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToReachSabers)
+            if (_beatTime > swingData.swingStartBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
-                _leftSaber.SetTargetPalmOrientation(cutData.sliceParity == Parity.Forehand ? 180.0f : 0.0f);
+                _leftSaber.SetTargetPalmOrientation(swingData.swingParity == Parity.Forehand ? 180.0f : 0.0f);
             }
-            if (_beatTime > cutData.sliceEndBeat - _startBeatOffset + _beatTimeToReachSabers)
+            if (_beatTime > swingData.swingEndBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
                 ++_leftSliceIndex;
-                if (_leftSliceIndex < _sliceMapLeft.GetSliceCount())
+                if (_leftSliceIndex < _leftHandSwings.Count)
                 {
-                    BeatCutData nextCutData = _sliceMapLeft.GetBeatCutData(_leftSliceIndex);
-                    float timeTilNextBeat = TimeUtils.BeatsToSeconds(_BPM, nextCutData.sliceStartBeat - cutData.sliceEndBeat);
+                    SwingData nextSwingData = _leftHandSwings[_leftSliceIndex];
+                    float timeTilNextBeat = TimeUtils.BeatsToSeconds(_BPM, nextSwingData.swingStartBeat - swingData.swingEndBeat);
                     _leftSaber.SetTimeToNextBeat(timeTilNextBeat);
                 }
             }
-            UpdateSaberCutText(_leftSaberDataText, cutData);
-            UpdateOffsetInfoText(_offsetDataText, cutData);
+            UpdateSaberCutText(_leftSaberDataText, swingData);
+            UpdateOffsetInfoText(_offsetDataText, swingData);
         }
-        if (_rightSliceIndex < _sliceMapRight.GetSliceCount())
+        if (_rightSliceIndex < _rightHandSwings.Count)
         {
-            BeatCutData cutData = _sliceMapRight.GetBeatCutData(_rightSliceIndex);
-            _rightSaber.SetRestingWristPosition(2 + cutData.playerXOffset, 0);
-            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset)
+            SwingData swingData = _rightHandSwings[_rightSliceIndex];
+            _rightSaber.SetRestingWristPosition(2 + (int)swingData.playerHorizontalOffset, 0);
+            if (_beatTime > swingData.swingStartBeat - _startBeatOffset)
             {
-                _rightSaber.SetTargetWristPosition(cutData.startPositioning.x, cutData.startPositioning.y);
-                _rightSaber.SetTargetWristOrientation(cutData.startPositioning.angle);
-                _rightSaber.SetTargetEBPM(cutData.swingEBPM);
+                _rightSaber.SetTargetWristPosition(swingData.startPos.x, swingData.startPos.y);
+                _rightSaber.SetTargetWristOrientation(swingData.startPos.rotation);
+                _rightSaber.SetTargetEBPM(swingData.swingEBPM);
             }
-            if (_beatTime > cutData.sliceStartBeat - _startBeatOffset + _beatTimeToReachSabers)
+            if (_beatTime > swingData.swingStartBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
-                _rightSaber.SetTargetPalmOrientation(cutData.sliceParity == Parity.Forehand ? 180.0f : 0.0f);
+                _rightSaber.SetTargetPalmOrientation(swingData.swingParity == Parity.Forehand ? 180.0f : 0.0f);
             }
-            if (_beatTime > cutData.sliceEndBeat - _startBeatOffset + _beatTimeToReachSabers)
+            if (_beatTime > swingData.swingEndBeat - _startBeatOffset + _beatTimeToReachSabers)
             {
                 ++_rightSliceIndex;
-                if (_rightSliceIndex < _sliceMapRight.GetSliceCount())
+                if (_rightSliceIndex < _rightHandSwings.Count)
                 {
-                    BeatCutData nextCutData = _sliceMapRight.GetBeatCutData(_rightSliceIndex);
-                    float timeTilNextBeat = TimeUtils.BeatsToSeconds(_BPM, nextCutData.sliceStartBeat - cutData.sliceEndBeat);
+                    SwingData nextSwingData = _rightHandSwings[_rightSliceIndex];
+                    float timeTilNextBeat = TimeUtils.BeatsToSeconds(_BPM, nextSwingData.swingStartBeat - swingData.swingEndBeat);
                     _rightSaber.SetTimeToNextBeat(timeTilNextBeat);
                 }
             }
-            UpdateSaberCutText(_rightSaberDataText, cutData);
-            UpdateOffsetInfoText(_offsetDataText, cutData);
+            UpdateSaberCutText(_rightSaberDataText, swingData);
+            UpdateOffsetInfoText(_offsetDataText, swingData);
         }
 
         List<GameObject> removals = new List<GameObject>();
@@ -337,14 +366,14 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         }
     }
 
-    private void UpdateSaberCutText(Text text, BeatCutData data)
+    private void UpdateSaberCutText(Text text, SwingData data)
     {
-        text.text = "Parity: " + data.sliceParity.ToString() + ",\tAngle: " + data.startPositioning.angle + ",\tPosition: (" + data.startPositioning.x + "," + data.startPositioning.y + ")";
+        text.text = "Parity: " + data.swingParity.ToString() + ",\tAngle: " + data.startPos.rotation + ",\tPosition: (" + data.startPos.x + "," + data.startPos.y + ")";
     }
 
-    private void UpdateOffsetInfoText(Text text, BeatCutData data)
+    private void UpdateOffsetInfoText(Text text, SwingData data)
     {
-        text.text = "X offset: " + data.playerXOffset + ",\tY offset: " + data.playerYOffset;
+        text.text = "X offset: " + data.playerHorizontalOffset + ",\tY offset: " + data.playerVerticalOffset;
     }
 
     public void SpawnNote(int x, int y, int d, int c)
@@ -421,20 +450,20 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
             _obstaclesIndex = _bombs.Count;
         }
 
-        int numLeftCutData = _sliceMapLeft.GetSliceCount();
-        for (int i = 0; i < numLeftCutData; ++i)
+        int numLeftSwingData = _leftHandSwings.Count;
+        for (int i = 0; i < numLeftSwingData; ++i)
         {
-            if (_sliceMapLeft.GetBeatCutData(i).sliceStartBeat > _beatTime)
+            if (_leftHandSwings[i].swingStartBeat > _beatTime)
             {
                 _leftSliceIndex = i;
                 break;
             }
         }
 
-        int numRightCutData = _sliceMapRight.GetSliceCount();
-        for (int i = 0; i < numRightCutData; ++i)
+        int numRightSwingData = _rightHandSwings.Count;
+        for (int i = 0; i < numRightSwingData; ++i)
         {
-            if (_sliceMapRight.GetBeatCutData(i).sliceStartBeat > _beatTime)
+            if (_rightHandSwings[i].swingStartBeat > _beatTime)
             {
                 _rightSliceIndex = i;
                 break;

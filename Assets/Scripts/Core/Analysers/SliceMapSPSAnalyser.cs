@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using JoshaParity;
 using UnityEngine;
 
 public class SliceMapSPSAnalyser : SliceMapBucketedAnalyser<float>
@@ -11,17 +12,18 @@ public class SliceMapSPSAnalyser : SliceMapBucketedAnalyser<float>
         Right,
     }
 
-    public override void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public override void ProcessSwingData(MapDatabase mapDatabase, BeatmapStructure mapMetadata, List<SwingData> leftHand, List<SwingData> rightHand)
     {
-        base.ProcessSliceMaps(mapDatabase, mapMetadata, leftHand, rightHand);
+        base.ProcessSwingData(mapDatabase, mapMetadata, leftHand, rightHand);
 
         HandMode currentHand = HandMode.Left;
         int leftSliceIndex = 0;
         int rightSliceIndex = 0;
-        int leftSliceCount = leftHand.GetSliceCount();
-        int rightSliceCount = rightHand.GetSliceCount();
-        BeatCutData leftBeatCutData = leftHand.GetBeatCutData(0);
-        BeatCutData rightBeatCutData = rightHand.GetBeatCutData(0);
+        int leftSliceCount = leftHand.Count;
+        int rightSliceCount = rightHand.Count;
+        SwingData leftSwingData = leftHand[0];
+        SwingData rightSwingData = rightHand[0];
+
         int totalSliceCount = 0;
         int bucketCount = GetBucketCount();
         int[] slicesPerBucket = new int[bucketCount];
@@ -30,26 +32,26 @@ public class SliceMapSPSAnalyser : SliceMapBucketedAnalyser<float>
         {
             float beatTime = 0.0f;
             bool isDouble = false;
-            if (Mathf.Abs(leftBeatCutData.sliceStartBeat - rightBeatCutData.sliceStartBeat) <= Mathf.Epsilon)
+            if (Mathf.Abs(leftSwingData.swingStartBeat - rightSwingData.swingStartBeat) <= Mathf.Epsilon)
             {
-                if (leftBeatCutData.notesInCut != null && rightBeatCutData.notesInCut != null)
+                if (leftSwingData.notes.Count == 0 && rightSwingData.notes.Count == 0)
                 {
                     isDouble = true;
                 }
             }
-            else if (leftBeatCutData.sliceStartBeat > rightBeatCutData.sliceStartBeat && currentHand == HandMode.Left)
+            else if (leftSwingData.swingStartBeat > rightSwingData.swingStartBeat && currentHand == HandMode.Left)
             {
                 currentHand = HandMode.Right;
             }
-            else if (rightBeatCutData.sliceStartBeat > leftBeatCutData.sliceStartBeat && currentHand == HandMode.Right)
+            else if (rightSwingData.swingStartBeat > leftSwingData.swingStartBeat && currentHand == HandMode.Right)
             {
                 currentHand = HandMode.Left;
             }
 
-            int bucketIndex = GetBucketIndexFromBeat(leftBeatCutData.sliceStartBeat);
+            int bucketIndex = GetBucketIndexFromBeat(leftSwingData.swingStartBeat);
             if(isDouble)
             {
-                beatTime = leftBeatCutData.sliceStartBeat;
+                beatTime = leftSwingData.swingStartBeat;
                 ++leftSliceIndex;
                 ++rightSliceIndex;
             }
@@ -57,7 +59,7 @@ public class SliceMapSPSAnalyser : SliceMapBucketedAnalyser<float>
             {
                 if (currentHand == HandMode.Left)
                 {
-                    beatTime = leftBeatCutData.sliceStartBeat;
+                    beatTime = leftSwingData.swingStartBeat;
                     ++leftSliceIndex;
                     if (leftSliceIndex >= leftSliceCount)
                     {
@@ -66,7 +68,7 @@ public class SliceMapSPSAnalyser : SliceMapBucketedAnalyser<float>
                 }
                 else
                 {
-                    beatTime = rightBeatCutData.sliceStartBeat;
+                    beatTime = leftSwingData.swingStartBeat;
                     ++rightSliceIndex;
                     if (rightSliceIndex >= rightSliceCount)
                     {
@@ -77,11 +79,11 @@ public class SliceMapSPSAnalyser : SliceMapBucketedAnalyser<float>
 
             if (rightSliceIndex < rightSliceCount)
             {
-                rightBeatCutData = rightHand.GetBeatCutData(rightSliceIndex);
+                rightSwingData = rightHand[rightSliceIndex];
             }
             if (leftSliceIndex < leftSliceCount)
             {
-                leftBeatCutData = leftHand.GetBeatCutData(leftSliceIndex);
+                leftSwingData = leftHand[leftSliceIndex];
             }
             ++totalSliceCount;
             ++slicesPerBucket[GetBucketIndexFromBeat(beatTime)];

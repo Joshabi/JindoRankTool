@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using JoshaParity;
 using UnityEngine;
 
 public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser<float>
@@ -21,9 +22,9 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser<float>
     {
     }
 
-    public override void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public override void ProcessSwingData(MapDatabase mapDatabase, BeatmapStructure mapMetadata, List<SwingData> leftHand, List<SwingData> rightHand)
     {
-        base.ProcessSliceMaps(mapDatabase, mapMetadata, leftHand, rightHand);
+        base.ProcessSwingData(mapDatabase, mapMetadata, leftHand, rightHand);
 
         int bucketCount = GetBucketCount();
         SingleDoubleCounter[] singlesDoublesBuckets = new SingleDoubleCounter[bucketCount];
@@ -31,30 +32,28 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser<float>
         HandMode currentHand = HandMode.Left;
         int leftSliceIndex = 0;
         int rightSliceIndex = 0;
-        int leftSliceCount = leftHand.GetSliceCount();
-        int rightSliceCount = rightHand.GetSliceCount();
-        BeatCutData leftBeatCutData = leftHand.GetBeatCutData(0);
-        BeatCutData rightBeatCutData = rightHand.GetBeatCutData(0);
+        int leftSliceCount = leftHand.Count;
+        int rightSliceCount = rightHand.Count;
         while (leftSliceIndex < leftSliceCount && rightSliceIndex < rightSliceCount)
         {
             bool isDouble = false;
-            if (Mathf.Abs(leftBeatCutData.sliceStartBeat - rightBeatCutData.sliceStartBeat) <= Mathf.Epsilon)
+            if (Mathf.Abs(leftHand[leftSliceIndex].swingStartBeat - rightHand[rightSliceIndex].swingStartBeat) <= Mathf.Epsilon)
             {
-                if (leftBeatCutData.notesInCut != null && rightBeatCutData.notesInCut != null)
+                if (leftHand[leftSliceIndex].notes.Count != 0 && rightHand[rightSliceIndex].notes.Count != 0)
                 {
                     isDouble = true;
                 }
             }
-            else if (leftBeatCutData.sliceStartBeat > rightBeatCutData.sliceStartBeat && currentHand == HandMode.Left)
+            else if (leftHand[leftSliceIndex].swingStartBeat > rightHand[rightSliceIndex].swingStartBeat && currentHand == HandMode.Left)
             {
                 currentHand = HandMode.Right;
             }
-            else if (rightBeatCutData.sliceStartBeat > leftBeatCutData.sliceStartBeat && currentHand == HandMode.Right)
+            else if (rightHand[rightSliceIndex].swingStartBeat > leftHand[leftSliceIndex].swingStartBeat && currentHand == HandMode.Right)
             {
                 currentHand = HandMode.Left;
             }
 
-            int bucketIndex = GetBucketIndexFromBeat(leftBeatCutData.sliceStartBeat);
+            int bucketIndex = GetBucketIndexFromBeat(leftHand[0].swingStartBeat);
             if (isDouble)
             {
                 singlesDoublesBuckets[bucketIndex].DoubleCount++;
@@ -80,15 +79,6 @@ public class SliceMapDoublesAnalyser : SliceMapBucketedAnalyser<float>
                         currentHand = HandMode.Left;
                     }
                 }
-            }
-
-            if (rightSliceIndex < rightSliceCount)
-            {
-                rightBeatCutData = rightHand.GetBeatCutData(rightSliceIndex);
-            }
-            if (leftSliceIndex < leftSliceCount)
-            {
-                leftBeatCutData = leftHand.GetBeatCutData(leftSliceIndex);
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using JoshaParity;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -142,7 +143,9 @@ public class JindoRankTool : MonoBehaviour
     {
         MapId id = _mapDatabase.GetMapIdFromFolderPath(levelFolder);
         beatmapData.Metadata.id = id;
-        _sliceMapOutputter.ProcessBeatmap(beatmapData);
+
+        MapAnalyser mapAnalyser = new(levelFolder);
+        _sliceMapOutputter.ProcessBeatmap(beatmapData, mapAnalyser);
     }
 
     private void OnPreviewLevelLoaded(string levelFolder, LevelStructure loadedLevel, BeatmapData beatmapData)

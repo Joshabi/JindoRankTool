@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using JoshaParity;
 
 public class LevelSliceMapOutputter
 {
@@ -41,18 +42,20 @@ public class LevelSliceMapOutputter
         return _analysers.Remove(inAnalyserID);
     }
 
-    public void ProcessBeatmap(BeatmapData beatmapData)
+    public void ProcessBeatmap(BeatmapData beatmapData, MapAnalyser mapAnalyser)
     {
         float bpm = _mapDatabase.GetMapBPM(beatmapData.Metadata.id);
-        SliceMap rightHandSliceMap = new SliceMap(bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: true);
-        SliceMap leftHandSliceMap = new SliceMap(bpm, beatmapData.BeatData.colorNotes.ToList<ColourNote>(), beatmapData.BeatData.bombNotes.ToList<BombNote>(), beatmapData.BeatData.obstacles.ToList<Obstacle>(), isRightHand: false);
+
+        List<SwingData> swingData = mapAnalyser.GetSwingData(beatmapData.Metadata._difficultyRank);
+        List<SwingData> rightHandSwingData = swingData.FindAll(x => x.rightHand);
+        List<SwingData> leftHandSwingData = swingData.FindAll(x => !x.rightHand);
 
         LevelSliceMapHeader header = new LevelSliceMapHeader();
         header.mapMetadata = beatmapData.Metadata;
         List<LevelSliceMapAnalyticsObject> analytics = new List<LevelSliceMapAnalyticsObject>();
         foreach (ISliceMapAnalyser analyser in _analysers.Values)
         {
-            analyser.ProcessSliceMaps(_mapDatabase, beatmapData.Metadata, leftHandSliceMap, rightHandSliceMap);
+            analyser.ProcessSwingData(_mapDatabase, beatmapData.Metadata, leftHandSwingData, rightHandSwingData);
 
             LevelSliceMapAnalyticsObject analyserObject = new LevelSliceMapAnalyticsObject();
             analyserObject.name = analyser.GetAnalyticsName();

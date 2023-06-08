@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using JoshaParity;
 using UnityEngine;
 
 /**
@@ -16,7 +17,7 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser<float>
     class AccGridPosition
     {
 
-        public AccGridPosition(ColourNote n)
+        public AccGridPosition(Note n)
         {
             x = n.x;
             y = n.y;
@@ -97,9 +98,9 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser<float>
         return inBlockCounts.FrequencyMap.Keys.Count;
     }
 
-    public override void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public override void ProcessSwingData(MapDatabase mapDatabase, BeatmapStructure mapMetadata, List<SwingData> leftHand, List<SwingData> rightHand)
     {
-        base.ProcessSliceMaps(mapDatabase, mapMetadata, leftHand, rightHand);
+        base.ProcessSwingData(mapDatabase, mapMetadata, leftHand, rightHand);
 
         List<BlockFrequencyAccGrid> bucketsForCoverageCounting = new List<BlockFrequencyAccGrid>();
 
@@ -129,16 +130,16 @@ public class SliceMapCoverageAnalyser : SliceMapBucketedAnalyser<float>
         return "Returns a percentage denoting how much of the acc grid is covered by unique configurations of notes. 0 = empty acc grid, 1 = every possible direction and colour occupies every space on the grid. Higher values are indicative of more variety in patterns.";
     }
 
-    private void CountBlocksInSliceMap(SliceMap inSliceMap, List<BlockFrequencyAccGrid> bucketsForCoverageCounting)
+    private void CountBlocksInSliceMap(List<SwingData> swings, List<BlockFrequencyAccGrid> bucketsForCoverageCounting)
     {
-        int numCuts = inSliceMap.GetSliceCount();
+        int numCuts = swings.Count;
         int cutIndex = 0;
         while (cutIndex < numCuts)
         {
-            BeatCutData cut = inSliceMap.GetBeatCutData(cutIndex);
-            if (cut.notesInCut != null)
+            SwingData cut = swings[cutIndex];
+            if (cut.notes.Count != 0)
             {
-                foreach (ColourNote note in cut.notesInCut)
+                foreach (Note note in cut.notes)
                 {
                     if (note.c > 1)
                     {

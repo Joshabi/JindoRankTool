@@ -1,3 +1,4 @@
+using JoshaParity;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,7 +22,7 @@ public class SliceMapHorizontalAngleAnalyser : SliceMapSeparateHandAnalyser
         return "horizontalAngleRatio";
     }
 
-    protected override void ProcessHand(SliceMap hand, bool isLeftHand)
+    protected override void ProcessHand(List<SwingData> handSwings, bool isLeftHand)
     {
         int bucketCount = GetBucketCount();
         int totalNotes = 0;
@@ -29,14 +30,14 @@ public class SliceMapHorizontalAngleAnalyser : SliceMapSeparateHandAnalyser
         int[] notesInBucket = new int[bucketCount];
         float[] bucketRatioBuffer = new float[bucketCount];
 
-        int sliceCount = hand.GetSliceCount();
+        int sliceCount = handSwings.Count;
         for (int sliceIndex = 0; sliceIndex < sliceCount; ++sliceIndex)
         {
-            BeatCutData cutData = hand.GetBeatCutData(sliceIndex);
+            SwingData swingData = handSwings[sliceIndex];
 
-            if (cutData.notesInCut != null)
+            if (swingData.notes != null)
             {
-                foreach (ColourNote note in cutData.notesInCut)
+                foreach (Note note in swingData.notes)
                 {
                     int bucketIndex = GetBucketIndexFromBeat(note.b);
                     float ratio = GetHorizontalFactorFromNoteDirection((BeatCutDirection)note.d);

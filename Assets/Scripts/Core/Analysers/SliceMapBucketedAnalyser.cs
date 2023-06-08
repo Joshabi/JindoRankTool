@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using JoshaParity;
 using UnityEngine;
 
 /**
@@ -32,16 +33,16 @@ public abstract class SliceMapBucketedAnalyser<DataType> : ISliceMapAnalyser
     private float _currentMapBPM = 0.0f;
     private float _currentMapDuration = 0.0f;
 
-    public SliceMapBucketedAnalyser()
+    protected SliceMapBucketedAnalyser()
     {
     }
 
-    public SliceMapBucketedAnalyser(float inBucketDurationInSeconds)
+    protected SliceMapBucketedAnalyser(float inBucketDurationInSeconds)
     {
         _bucketDurationInSeconds = inBucketDurationInSeconds;
     }
 
-    public virtual void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand)
+    public virtual void ProcessSwingData(MapDatabase mapDatabase, BeatmapStructure mapMetadata, List<SwingData> leftHand, List<SwingData> rightHand)
     {
         _data = new Data();
         _data.secondsPerBucket = _bucketDurationInSeconds;
@@ -49,11 +50,9 @@ public abstract class SliceMapBucketedAnalyser<DataType> : ISliceMapAnalyser
         _currentMapBPM = mapDatabase.GetMapBPM(mapMetadata.id);
         _currentMapDuration = mapDatabase.GetMapDuration(mapMetadata.id);
 
-        List<BeatCutData> leftCuts = new List<BeatCutData>();
-        List<BeatCutData> rightCuts = new List<BeatCutData>();
-        leftHand.WriteBeatCutDataToList(leftCuts);
-        rightHand.WriteBeatCutDataToList(rightCuts);
-        float lastBeat = Mathf.Max(leftCuts[leftCuts.Count - 1].sliceEndBeat, rightCuts[rightCuts.Count - 1].sliceEndBeat);
+        List<SwingData> leftCuts = new(leftHand);
+        List<SwingData> rightCuts = new(rightHand);
+        float lastBeat = Mathf.Max(leftCuts[^1].swingEndBeat, rightCuts[^1].swingEndBeat);
         _numBuckets = GetBucketIndexFromBeat(lastBeat)+1;
         _data.bucketValues = new DataType[_numBuckets];
     }

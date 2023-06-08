@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using JoshaParity;
 using UnityEngine;
 
 
@@ -98,15 +99,6 @@ public struct BeatmapFileStructureV2
     public NoteV2[] _notes;
     public SliderV2[] _sliders;
     public ObstacleV2[] _obstacles;
-}
-
-public enum BeatmapDifficultyRank
-{
-    Easy = 1,
-    Normal = 3,
-    Hard = 5,
-    Expert = 7,
-    ExpertPlus = 9,
 }
 
 [System.Serializable]

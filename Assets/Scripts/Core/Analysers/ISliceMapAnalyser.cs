@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using JoshaParity;
 using UnityEngine;
 
 /**
@@ -16,7 +17,7 @@ public interface ISliceMapAnalyser
      *
      * Try to confine all of the necessary state to this function, as each analyser is re-used for all maps.
      */
-    void ProcessSliceMaps(MapDatabase mapDatabase, BeatmapStructure mapMetadata, SliceMap leftHand, SliceMap rightHand);
+    void ProcessSwingData(MapDatabase mapDatabase, BeatmapStructure mapMetadata, List<SwingData> leftHand, List<SwingData> rightHand);
 
     // Return the name of this analyser.
     string GetAnalyticsName();
