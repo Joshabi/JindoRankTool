@@ -10,7 +10,7 @@ public class LevelUtils
         return Vector2.one;
     }
 
-    public static Vector2 GetWorldXYFromBeatmapCoords(int x, int y)
+    public static Vector2 GetWorldXYFromBeatmapCoords(float x, float y)
     {
         Vector2 cellSize = GetCellSize();
         return new Vector2(((x - 2) * cellSize.x) + 0.5f, (y * cellSize.y) + 0.5f);

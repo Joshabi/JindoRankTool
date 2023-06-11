@@ -131,7 +131,7 @@ public class LevelPreview : MonoBehaviour, IRuntimeLevelContext
         _beatmap = beatmapData;
         _currentMapDirectory = levelFolder;
 
-        MapAnalyser mapAnalyser = new(levelFolder);
+        MapAnalyser mapAnalyser = new(levelFolder, new GenericParityCheck());
         _analyser = mapAnalyser;
 
         _mapNameText.text = beatmapData.Metadata.mapName + " (" + beatmapData.Metadata._difficultyRank.ToString() + ")";

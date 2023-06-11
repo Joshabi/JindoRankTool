@@ -607,7 +607,7 @@ MonoBehaviour:
   _bombPrefab: {fileID: 2055558874998763406, guid: fffb9d4a46b96ab4cadc16bb602eccfd,
     type: 3}
   _speed: 75
-  _leftColour: {r: 1, g: 0.4710667, b: 0, a: 0}
+  _leftColour: {r: 1, g: 0.07738829, b: 0, a: 0}
   _rightColour: {r: 0, g: 0.8077564, b: 1, a: 0}
   _saberZ: -30
   _mapNameText: {fileID: 1548289287}
@@ -615,7 +615,7 @@ MonoBehaviour:
   _leftSaberDataText: {fileID: 74163854}
   _rightSaberDataText: {fileID: 1674964575}
   _offsetDataText: {fileID: 157118613}
-  _startTime: 0
+  _startTime: 80
 --- !u!114 &453708159
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -628,9 +628,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 028a8d0594ba28441ad266b4c6fc580b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _customLevelPath: Enter map file path here!
+  _customLevelPath: C:\Users\Joshabi\Documents\GitHub\JoshaParity\JoshaParity\bin\Debug\net6.0\Maps\Blood
+    Moon
   _desiredDifficulty: 9
-  _previewMap: 0
+  _previewMap: 1
   _playlistURL: 
   _timeScale: 1
 --- !u!4 &453708160

@@ -86,7 +86,7 @@ public class SaberController : MonoBehaviour
         _targetPalmOrientation = a;
     }
 
-    public void SetTargetWristPosition(int x, int y)
+    public void SetTargetWristPosition(float x, float y)
     {
         _targetWristPosition = LevelUtils.GetWorldXYFromBeatmapCoords(x, y);
     }
